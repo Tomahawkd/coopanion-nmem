@@ -97,7 +97,7 @@ coopanion-nmem/
 | --- | --- | --- | --- | --- |
 | `nmem_search` | `['read']` | `POST /memories/search` | `query` 必填 string 1..500；`limit` 整数 1..10（缺省取配置 `searchLimit`）；`mode` enum `fast\|deep`（缺省取配置 `searchMode`） | 只读；回执含 id/标题/相似度/摘要（截断），尾部提示可用 `nmem_get` 取全文 |
 | `nmem_get` | `['read']` | `GET /memories/{id}` | `id` 必填 string | 只读；404 → 明确「未找到」回执 |
-| `nmem_save` | `['write']` | `POST /memories` | `content` 必填 string 1..30000（§2c 上限说明）；`title?`；`unit_type?` enum（fact/preference/decision/plan/procedure/learning/context/event，nmem-api §2.3）；`labels?` string[]；`id?` string ≤200（upsert）；`importance?` 0..1 | **幂等**：传 `id` 走服务端 upsert（R9），回执报告 `action: created\|updated`；不传 `id` 为新建。**溯源**：服务端自动补 `source:'coopanion'`、`source_app:'cortico-world-nmem'`、`agent_id: ctx.botName`（"Identity is provenance, not auth."，nmem-api §2.3）；默认并入 label `coopanion`（便于 Mem 侧过滤/清理，R7 提示不写自定义 metadata 键避免与检索诊断混淆） |
+| `nmem_save` | `['write']` | `POST /memories` | `content` 必填 string 1..30000（§2c 上限说明）；`title?`；`unit_type?` enum（fact/preference/decision/plan/procedure/learning/context/event，nmem-api §2.3）；`labels?` string[]；`id?` string ≤200（upsert）；`importance?` 0..1 | **幂等**：传 `id` 走服务端 upsert（R9），回执报告 `action: created\|updated`；不传 `id` 为新建。**溯源（实现口径，T3 落地 + D12 修订）**：工具层恒写入 `source:'coopanion'`、`source_app:'cortico-world-nmem'`、`agent_id`（client 只透传，模型不可覆写）；`agent_id` 取配置旋钮 `worlds.nmem.agentId`（缺省 `'coopanion'`；不再使用 `ctx.botName`——S5 实证 Mem 按 agent profile id 校验：小写字母/数字起始，仅字母数字与 `_.:-`，中文 displayName 必 422；"Identity is provenance, not auth."，nmem-api §2.3）；默认并入 label `coopanion`（便于 Mem 侧过滤/清理，R7 提示不写自定义 metadata 键避免与检索诊断混淆） |
 
 - `nmem_save` 的 `write` tag 依据：B27 定义 write =「修改 Memory 或 World 的内部记录」；严格看 Mem 是外部系统，但该 tag 的消费意图是「产生持久数据副作用」，与 `act`（对外动作）相比 `write` 是对模型更准确的信号。此为我的判断，若 reviewer 按「外部系统」口径主张 `act`，属可接受变更，不阻塞。
 - 事件：`nmem.started`（`origin:'internal'`，挂载确认，仿模板 B45）。无其他事件——本 World 是「仅提供请求/响应工具」形态（websearch 同类，B47），检索结果不落事件库。
@@ -170,6 +170,7 @@ coopanion-nmem/
 | `worlds.nmem.baseUrl` | string / `http://127.0.0.1:14242` | `false` | 远程填 `https://<host>`；改动需重启（client 在 create() 构造，websearch 同模式 B47） |
 | `worlds.nmem.searchLimit` | integer 1..10 / `5` | `true` | `nmem_search` 缺省条数；热改生效（cfg 活引用） |
 | `worlds.nmem.searchMode` | enum `fast\|deep` / `fast` | `true` | 交互场景优先低延迟（fast=BM25+vector）；工具参数可按次覆盖 |
+| `worlds.nmem.agentId` | string / `'coopanion'` | `true` | 写入 Mem 的 `agent_id`（溯源标识，**D12 用户新增，2026-10-26**）；须满足 Mem 约束：小写字母/数字起始，仅字母数字与 `_.:-`（S5 实证，中文如 displayName 会 422）；ConfigGroup schema 带 pattern；热改生效（工具层现读 cfg） |
 
 **秘密：`NMEM_API_KEY` 经部署 `.env`（`ctx.secret()` 在 create() 读取）。**
 

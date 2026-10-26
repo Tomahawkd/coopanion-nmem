@@ -1,10 +1,10 @@
 # 需求主文档：Coopanion × Nowledge Mem 插件（coopanion-mem-plugin）
 
 - 需求标识：`coopanion-mem-plugin`
-- 主文档版本：v0.7（实施中：T1/T2 组级验收通过；**全局纠正额度已归零**；T3 待启动/继续）
+- 主文档版本：v0.8（实施中：T1–T3 第 0 轮均组级验收通过；T3 新增范围轮（D12 agentId 旋钮）待执行；T4 其后）
 - 项目仓库：`/Users/tomahawkd/Documents/projects/coopanion-nmem`（本仓库，尚无 git）
 - 需求开发目录：`docs/dev/coopanion-mem-plugin/`（用户 2026-10-26 裁定）
-- 最后更新：2026-10-26 16:20 CST，由 orchestrator 维护
+- 最后更新：2026-10-26 17:45 CST，由 orchestrator 维护
 
 ## 1. 用户原始意图
 
@@ -25,6 +25,7 @@
 | D9 | 远程验收深度（同上） | 仅本地验收；远程以配置面+文档交付，README 注明「未实测」 |
 | D10 | A5 写路径策略（同上） | PARTNER.md 并行写：Coo 照常维护 PARTNER.md，同时另存 Mem（ENV_PROMPT 提示词策略） |
 | D11 | 许可证（同上） | MIT（与 Cortico 模板一致；发布市场时可复议） |
+| D12 | agent_id 可配置（2026-10-26，针对 S5 的新增授权） | 新增旋钮 `worlds.nmem.agentId`（缺省 `'coopanion'`，热改；须满足 Mem 约束：小写字母/数字起始，仅字母数字与 `_.:-`），工具层不再使用 `ctx.botName`；属**新增范围授权，非纠正轮**，全局纠正额度维持 2/2 已用尽 |
 
 ## 3. 明确约束
 
@@ -64,14 +65,17 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | T1 仓库脚手架与工程门禁 | planner「T1」 | `tasks/T1.md` | 可安装可挂载的最小 World 包 + 工程门禁就位 | 无 | **组级验收通过（第 0 轮 + 纠正第 1 轮；基线提交 `496fd20`）**；非阻塞分流：L5→T2、F4/F5→T3、index.ts 覆盖/F2/缺口 5 GUI 目视→T4 | 三命令+coverage 全绿 + sideload 三步 + nmem.started 事件（orchestrator 亲验）；R1 无阻塞接受、R2 无保留接受 |
 | T2 Mem REST 客户端层 | planner「T2」 | `tasks/T2.md` | 类型化、框架无关、可独立单测的 Mem 客户端 | T1 ✅ | **组级验收通过（第 0 轮 + 纠正第 2 轮；提交 `caf7b2a`→`8322e45`）**；契约快照 §8.4 冻结；X4→T3、X5→T4、真实联测→T4 已分流 | 43→51 用例 + 覆盖不劣化 + 门禁 0 findings（X2 收口，三方四次复跑）；R1 撤回全部阻塞、R2 无保留接受（orchestrator 亲验） |
-| T3 World 工具与提示词策略 | planner「T3」 | `tasks/T3.md` | Coo 能经 nmem_* 工具读写 Mem（含 client↔world 集成） | T1 ✅ T2 ✅（seam 冻结，集成段已解锁） | 未启动（可启动） | dry-mount + 工具单测（fake client）+ describe 一致性；含 X4（excerpt 不透传）与 F4/F5 |
-| T4 契约测试与真机验收支撑 | planner「T4」 | `tasks/T4.md` | 端到端链路验证 + 可重复验收材料 | T3（编码可先行于 T2 后） | 未启动 | 契约套件全绿 + 场景 A–D 留证；附 index.ts 入口覆盖、F2（README/files 核对）、缺口 5 GUI 目视（可选） |
+| T3 World 工具与提示词策略 | planner「T3」 | `tasks/T3.md` | Coo 能经 nmem_* 工具读写 Mem（含 client↔world 集成） | T1 ✅ T2 ✅ | **第 0 轮组级验收通过**（R1 无阻塞、R2 无保留，均延伸终态；提交 `0bdbb1b`→`46bc3c4`）；smoke：挂载/search 通、save 因 S5 422（已定位）；**新增范围轮（D12 agentId 旋钮）待执行** | 101/101、四文件 100%、门禁 11 files 0 findings（四方复跑）；D12 轮后 agent_id 写路径解锁 |
+| T4 契约测试与真机验收支撑 | planner「T4」 | `tasks/T4.md` | 端到端链路验证 + 可重复验收材料 | T3（含 D12 轮）完成后启动 | 未启动 | 契约套件全绿 + 场景 A–D 留证；附 index.ts 覆盖、F2、X5（鉴权走数据端点）、S6①（agent_id 规则契约测试，对配置路径）、GUI 目视（可选）；**场景 B 由 D12 缺省 `'coopanion'` 天然解锁（无需改 displayName）** |
 
 依赖顺序：T1 → {T2 ∥ T3（至集成点）} → 集成（T3 内）→ T4。每组由用户独立启动 planner 主会话；组内实施细化由 planner 负责。
 
 ## 7. 阶段状态与全局纠正预算
 
-- 当前阶段：**实施中**（T1/T2 已关闭；**T3 待启动**（若尚未开）或继续；T4 待 T3 完成后启动）。
+- 当前阶段：**实施中**（T1–T3 第 0 轮均闭环；**T3 新增范围轮（D12）待用户继续 T3 会话执行**；T4 其后启动）。
+- 纠正预算登记：全局纠正额度维持 **2/2 已用尽**。D12 为用户新增范围授权（新需求增量），不占用、不重置纠正额度；T3 第 0 轮内补齐（P2F/F1FIX）经用户授权登记，同样未动额度。后续任何「修正既有交付」的问题仍只登记不派发，除非用户增加授权。
+- 外部缺陷登记（S4，转用户知恶）：`../codeharness` 存在跨文件绑定崩溃缺陷（测试对导入 const 直接取成员调用时，CJK 内容必现 `UnicodeDecodeError`，exit 2；合成工程已复现，证据 `/tmp/t3-p1-evidence/05-gate-crash-minimal.txt`）。本仓库现状 0 findings 未受影响；短期约束（T4 起）：测试勿对导入 const 直接取成员调用。按 D5「不改 codeharness 本身」不修；是否另立修复任务由用户另行决定（R2 建议：修复宜以最小复现为回归夹具）。
+- S5 终局登记：根因为 Mem 服务端 agent profile id 校验（T3-D14 探针实证）；D12 裁定后写路径经旋钮解锁（缺省 ASCII `'coopanion'`），原「改 displayName」事实陈述保留但不再是必要条件；S6①→T4 契约测试（对配置路径）、S6②→DELETE 已实证存在（缺口 6 关闭依据）、S6③→architecture.md §1.4/§2e 措辞已由 orchestrator 按实现口径修正（本轮）。
 - 纠正预算登记：第 0 轮（初始）、纠正第 1 轮（T1）、纠正第 2 轮（T2）均已关闭；**全局纠正额度已归零（2/2 已用）**。⚠ T3/T4 及最终验收阶段若再需任何修正，须用户明确增加授权，否则 orchestrator 停止纠正派发（问题仍会登记与汇报，但不派发修正）。
 - X2 落地登记（义务③）：声明已于 `5a2c940` 落地（与批准件逐字一致，纯增量）；收口证据 = 真仓库全量审计 0 findings（即时/C1 后/C1b 后/终态四次，三方复跑）；移除条件 = `send` body 语义或 transport 契约出现非出口消费者时复审；fail-closed = `send` 签名/路径变化即惰性失效、finding 回归。详见 T2-worklog §9.1。
 - 冻结约束更新：`package.json` 与 `AGENTS.md` 仍冻结；`.codeharness/code-harness.json` 自本轮起含已批准声明，后续变更同样走全量审计 + architecture 审查。
@@ -91,6 +95,7 @@
 | T1-FIX1（纠正第 1 轮） | planner「T1」组内 | C3/C4/C4′/C1-B/L1 + R1/R2 闭环 | `tasks/T1-worklog.md` §9 | **已完成，组级验收通过**（基线 `496fd20`） |
 | T2-IMPL（第 0 轮） | planner「T2」组内（coder×3/tester/R1/R2 六会话） | mem 客户端、43 用例矩阵、L5+守护、缺口 4 实测、缺口 7 关闭、联合准入+交叉核对 | `tasks/T2-worklog.md` §6–§8 | **已完成，组级未验收**（收敛「需修改后接受」；提交 `caf7b2a`→`5d30e8d`） |
 | T2-FIX2（纠正第 2 轮） | planner「T2」组内 | C1/F1/F1b 双形式解析与 fail-fast + X2 声明落地与审计收口 + R1/R2 闭环 | `tasks/T2-worklog.md` §9 | **已完成，组级验收通过**（提交 `e79cb19`/`5a2c940`/`160cd51`/`8322e45`） |
+| T3-IMPL（第 0 轮） | planner「T3」组内（coder×3/tester/R1/R2 七会话+smoke） | 三工具+接线+ENV_PROMPT+describe、F4/F5/X4、F1 补齐、真机 smoke、S5 根因定位 | `tasks/T3-worklog.md` §5–§8 | **已完成，组级验收通过**（提交 `0bdbb1b`/`36e622c`/`46bc3c4`；S5 登记→D12 新增范围待执行） |
 
 ## 9. 角色会话登记
 
@@ -111,3 +116,4 @@
 - v0.5（2026-10-26）：T1 纠正第 1 轮闭环，组级验收通过（R1 无阻塞接受、R2 无保留接受；四命令含 coverage 三方复跑全绿；基线提交 `496fd20`，orchestrator 亲验）；纠正第 1 轮关闭，剩余额度 1；非阻塞分流登记（L5→T2，F4/F5→T3，index.ts/F2/缺口 5 GUI→T4）；T2/T3 开放启动。
 - v0.6（2026-10-26）：T2 第 0 轮完成并亲验（43/43、覆盖、恰 2 条登记 finding、证据在位）；登记纠正第 2 轮（C1 按 §6.7 收敛范围 + X2 落地）；X2 批准（附四条义务，architecture.md §4.1 定稿）；§2f Retry-After 双形式澄清登记；O1 已接受风险登记；X4→T3、X5→T4 分流；**本轮后纠正额度归零，后续修正需用户增授权**；T3 允许与 T2 纠正轮并行（seam 冻结）。
 - v0.7（2026-10-26）：T2 纠正第 2 轮闭环并亲验（声明与批准件一致、51/51、门禁 9 files 0 findings、工作树干净）；T2 组级验收通过（R1 撤回全部阻塞含 F1b、R2 无保留接受延伸至终态）；缺口 4/7 关闭；X2 落地登记（义务③）完成；**全局纠正额度 2/2 已用尽**；T3 集成段解锁。
+- v0.8（2026-10-26）：T3 第 0 轮闭环并核实（101/101、四文件 100%、门禁 11 files 0 findings；R1/R2 接受延伸终态；smoke：挂载/search 通、save 因 S5 422 已根因定位）；用户裁定 **D12**（agent_id 可配置旋钮，缺省 `'coopanion'`）——登记为新增范围授权非纠正轮；architecture.md §1.4/§2e 按实现口径修正并新增 agentId 行；S4 外部缺陷登记（短期约束生效）；S6 分流 T4；T4 场景 B 经 D12 解锁。
