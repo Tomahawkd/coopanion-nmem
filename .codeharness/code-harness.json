@@ -1,0 +1,50 @@
+{
+  "version": 2,
+  "include": ["src/*", "tests/*"],
+  "exclude": [],
+  "third_party_modules": ["cortico"],
+  "checkers": {
+    "function_size": {
+      "lines": 50, "statements": 50, "complexity": 10, "nesting": 3, "parameters": 5
+    },
+    "architecture.owner": {
+      "owners": [
+        { "name": "world composition and entry", "paths": ["src/index.ts", "src/definition.ts"] },
+        { "name": "mem rest client", "paths": ["src/mem/*"] },
+        { "name": "world tools and events", "paths": ["src/world.ts", "src/tools.ts"] },
+        { "name": "config and secrets", "paths": ["src/config.ts"] },
+        { "name": "verification", "paths": ["tests/*"] }
+      ]
+    },
+    "architecture.import": {
+      "boundaries": [
+        {
+          "name": "mem client stays framework-agnostic",
+          "sources": ["src/mem/*"],
+          "forbidden_imports": ["cortico", "cortico/*", "cortico.*"]
+        },
+        {
+          "name": "only the mem client owns network transport",
+          "sources": ["src/index.ts", "src/definition.ts", "src/world.ts", "src/tools.ts", "src/config.ts"],
+          "forbidden_imports": [
+            "node:http", "node:http/*", "node:https", "node:https/*",
+            "undici", "undici/*", "axios", "axios/*"
+          ]
+        },
+        {
+          "name": "config section owns the configuration surface",
+          "sources": ["src/config.ts"],
+          "forbidden_imports": [
+            "./mem/*", "../mem/*", "src/mem/*",
+            "./tools.ts", "./world.ts", "src/tools.ts", "src/world.ts"
+          ]
+        },
+        {
+          "name": "runtime does not depend on tests",
+          "sources": ["src/*"],
+          "forbidden_imports": ["tests", "tests/*", "vitest"]
+        }
+      ]
+    }
+  }
+}

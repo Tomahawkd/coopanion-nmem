@@ -1,0 +1,102 @@
+# 需求主文档：Coopanion × Nowledge Mem 插件（coopanion-mem-plugin）
+
+- 需求标识：`coopanion-mem-plugin`
+- 主文档版本：v0.4（实施中：T1 第 0 轮完成，纠正第 1 轮已分配）
+- 项目仓库：`/Users/tomahawkd/Documents/projects/coopanion-nmem`（本仓库，尚无 git）
+- 需求开发目录：`docs/dev/coopanion-mem-plugin/`（用户 2026-10-26 裁定）
+- 最后更新：2026-10-26 14:40 CST，由 orchestrator 维护
+
+## 1. 用户原始意图
+
+> 想做一个 https://github.com/Pal-AI-Lab/Coopanion 这个项目的插件，连接 https://mem.nowledge.co/docs 这个记忆管理软件。在此之前，还需要配置 ../codeharness 以支撑 architecture 管理和审查代码架构。
+
+## 2. 用户已确认决定（2026-10-26 问卷裁定）
+
+| # | 决定 | 内容 |
+| --- | --- | --- |
+| D1 | 需求文档落位 | `docs/dev/<需求名>/`，本需求为 `docs/dev/coopanion-mem-plugin/` |
+| D2 | 业务范围 | **双向：读 + 写**。Coo 对话时可搜索/召回 Nowledge Mem 中的记忆；对话中的新记忆也写入 Mem |
+| D3 | 交付形态 | **Cortico 扩展（World 包）**，TypeScript，可从 Coopanion Extensions 页安装 |
+| D4 | Mem 接入 | **本地与远程都支持**（默认本机 Mem 的 HTTP API，可配置远程 url+key；统一抽象由架构阶段决定） |
+| D5 | codeharness 配置范围 | ① 确认 `../codeharness` 可运行（uv 环境）；② 在本仓库创建 `.codeharness/code-harness.json` 架构策略（owner/import 边界）与 `AGENTS.md` 规约；③ architecture 在设计阶段定义边界，审查流程用门禁核查。不改 codeharness 本身 |
+| D6 | 验收环境 | 本机（macOS）已安装 Coopanion 发行版，可本机安装扩展实测 |
+| D7 | 发布形态（2026-10-26 二次裁定） | 本期不发布官方市场，本地 sideload 交付；后续可独立立项 |
+| D8 | WebUI 面板（同上） | v1 不做；配置走 ConfigGroup 旋钮，API key 手动编辑部署 .env |
+| D9 | 远程验收深度（同上） | 仅本地验收；远程以配置面+文档交付，README 注明「未实测」 |
+| D10 | A5 写路径策略（同上） | PARTNER.md 并行写：Coo 照常维护 PARTNER.md，同时另存 Mem（ENV_PROMPT 提示词策略） |
+| D11 | 许可证（同上） | MIT（与 Cortico 模板一致；发布市场时可复议） |
+
+## 3. 明确约束
+
+- Coopanion：AGPL-3.0，Electron + Cortico 内核，扩展即 Cortico World；扩展对使用者呈现只允许「经 Bot 工具/事件」或「托管自己的环境」两条路（Coopanion DEVELOPMENT.md「应用界面与 World 的边界」）。
+- Nowledge Mem：本地优先记忆层，提供 HTTP API、MCP server 与 `nmem` CLI；远程模式经 `nmem config client set --url ... --api-key ...`。
+- codeharness（`../codeharness`）：只读工程策略门禁 CLI（`code-harness --root <repo> --all` 等），支持 TS/TSX；无 MCP server 模式；目标仓库自带并提交 `.codeharness/code-harness.json` 策略；策略变更需全量审计与 architecture 审查（其 AGENTS.md 规约）。
+- 派发规约：业务子任务由用户独立启动 planner 主会话实施；orchestrator 只交付任务入口与启动说明。
+
+## 4. 需求解释（当前口径）
+
+让 Coopanion 桌宠 Coo 的记忆与用户的 Nowledge Mem 知识库双向打通：
+
+1. **读（召回）**：Coo 在对话中能够搜索/读取 Mem 中的记忆，用于回答与上下文；
+2. **写（沉淀）**：Coo 对话中产生的新记忆（以及/或其现有 PARTNER.md 记忆流）保存到 Mem；
+3. 不替换 Coopanion 内置记忆系统（D2 选「双向」而非「替换内置记忆」）；与 PARTNER.md 的关系由架构阶段澄清并存疑记录。
+
+## 5. 假设验证结果与待确认事项
+
+探索后假设状态（证据见 `explorations/` 两份报告）：
+
+| 假设 | 状态 | 结论摘要 |
+| --- | --- | --- |
+| A1 发行版可本地 sideload | **成立（有限定）** | Extensions 页 local 分段 → `POST /api/extensions/install {path}`，pnpm link 安装；装后需 Restart process + World 总览手动启用；无需进官方市场 |
+| A2 Mem HTTP API 可用 | **成立** | 本机已验证：写 `POST /memories`（`id` 可作幂等 upsert）、搜 `POST /memories/search`（混合检索）、读 `GET /memories/{id}`；本机免 key，远程须 `Bearer nmem_…`/`X-NMEM-API-Key`，**有 key 才发头，错 key 会 401** |
+| A3 扩展可访问 localhost/远程 | **成立** | 扩展与 Core 同进程（完整 Node 能力），无沙箱；回环强制进 NO_PROXY；renderer 白名单不影响扩展后端代码 |
+| A4 本机已装 Mem | **已验证** | Nowledge Mem 0.10.108 运行中，API 基址 `http://127.0.0.1:14242`，embedding local-gguf 未降级；MCP 同端口 `/mcp`（Streamable HTTP，75 工具） |
+| A5 与 PARTNER.md 的写路径关系 | **已关闭（D10）** | 并行写：ENV_PROMPT 提示词策略（非代码 hook）；不加模式旋钮（architecture.md §2d） |
+| A6 远程模式真机链路 | **已关闭（D9）** | 本期仅本地验收；远程能力以配置+文档交付并标注未实测，作为已知限制保留 |
+
+关键新事实（设计约束）：World 不能读 PARTNER.md；`outputTap` 可与桌宠扇入并存但拿不到用户输入；工具名全局唯一须用前缀（建议 `nmem_`）；`POST /threads` 有自动提炼副作用（重复写风险）；`storeSecret` 拒绝含空白值；无第三方 World 产品级兼容承诺（world 契约现为 6，严格相等才加载）。
+
+## 6. 业务子任务与状态
+
+整体方案：`docs/dev/coopanion-mem-plugin/architecture.md`（ARCH-DESIGN-1 交付；单一 World 包 `cortico-world-nmem`，四层：Mem REST 客户端 / World 工具与事件 / 配置与秘密 / ENV_PROMPT 策略；REST 直连、纯工具召回、`nmem_save` 唯一写路径幂等 upsert、错误矩阵、codeharness 策略草案）。
+
+| 子任务 | 责任组 | 简报 | 目标（行为） | 依赖 | 状态 | 验收依据 |
+| --- | --- | --- | --- | --- | --- | --- |
+| T1 仓库脚手架与工程门禁 | planner「T1」 | `tasks/T1.md` | 可安装可挂载的最小 World 包 + 工程门禁就位 | 无 | **第 0 轮完成；联合准入「需修改后接受」；纠正第 1 轮进行中（C3/C4/C4′/C1-B/L1）** | 三命令全绿 + sideload 三步 + nmem.started 事件（已亲验）；阻塞项见 T1-worklog §8 |
+| T2 Mem REST 客户端层 | planner「T2」 | `tasks/T2.md` | 类型化、框架无关、可独立单测的 Mem 客户端 | T1 | 未启动 | 行为矩阵单测 + 门禁边界绿 |
+| T3 World 工具与提示词策略 | planner「T3」 | `tasks/T3.md` | Coo 能经 nmem_* 工具读写 Mem（含 client↔world 集成） | T1，与 T2 并行至集成点 | 未启动 | dry-mount + 工具单测（fake client）+ describe 一致性 |
+| T4 契约测试与真机验收支撑 | planner「T4」 | `tasks/T4.md` | 端到端链路验证 + 可重复验收材料 | T3（编码可先行于 T2 后） | 未启动 | 契约套件全绿 + 场景 A–D 留证 |
+
+依赖顺序：T1 → {T2 ∥ T3（至集成点）} → 集成（T3 内）→ T4。每组由用户独立启动 planner 主会话；组内实施细化由 planner 负责。
+
+## 7. 阶段状态与全局纠正预算
+
+- 当前阶段：**实施中**（T1 纠正第 1 轮；T2/T3 待 T1 纠正轮关闭后启动，T4 最后）。
+- 纠正预算登记：初始实施与审查为第 0 轮；**纠正第 1 轮（进行中）= T1 修正包**，范围：C3（删 definition.ts 两行实现注释）、C4/C4′（补覆盖证据 + AGENTS 第 4 条修订）、C1（F1 处置，裁定 B：移除 ConfigGroup 的 enabled 旋钮，interface/defaults 保留）、L1（git init + 基线提交，T2/T3 启动前完成）。验收口径：R1 原会话定点确认后撤回阻塞；R2 条件 C1/C2 落地后无保留接受。**本轮关闭后剩余额度 1**。
+- orchestrator 裁定记录（2026-10-26，依据 T1-R1/R2 双方收敛结论，无需升级用户）：C1 取 B（模板仅声明自有旋钮，enabled 归 World 总览开关，避免双重开关；R2 建议、R1 无异议）；L1 授权 git init（门禁 diff 审计、「不自动回滚」纪律、并行界定均依赖版本控制；仅新增，不触及既有内容）；C2 修订包已由 orchestrator 汇入 architecture.md §2e/§4.1/§7 与 T2/T3 简报。
+
+## 8. 探索任务登记
+
+| 任务标识 | 角色 | 目标 | 交付物 | 状态 |
+| --- | --- | --- | --- | --- |
+| EXPLORE-COOPANION-EXT | explorer | Coopanion/Cortico 扩展开发机制与安装路径 | `explorations/coopanion-extension.md` | **已完成**（结论含 1 处自我更正：outputTap 扇入可并存，非独占） |
+| EXPLORE-NMEM-API | explorer | Nowledge Mem 接入面与本机状态 | `explorations/nmem-api.md` | **已完成**（本机已验证 + OpenAPI 实拉） |
+| ARCH-DESIGN-1 | architecture | 整体技术方案、模块边界、拆分建议、codeharness 策略设计 | `architecture.md` | **已完成**（11 项定夺 + 4 项用户决策已裁定 + 9 项实现期验证缺口登记；缺口 1/2/3/5 已随 T1 关闭，4/6/7/8/9 分别归 T2/T4） |
+| T1-IMPL（第 0 轮） | planner「T1」组内（coder/tester/reviewer/architecture 六会话） | 脚手架、门禁、uv sync、缺口 2/3/5、真机 sideload、联合准入 | `tasks/T1-worklog.md` §6 | **已完成，组级未验收**（联合准入收敛「需修改后接受」） |
+
+## 9. 角色会话登记
+
+| 角色 | 会话/操作 | 任务 | 状态 |
+| --- | --- | --- | --- |
+| explorer | 会话 12163038-0fe8-44fd-93c8-3be108334b6d | EXPLORE-COOPANION-EXT | 已完成 |
+| explorer | 会话 44e379e3-37e0-4c20-a7b8-1336f17770bb | EXPLORE-NMEM-API | 已完成 |
+| architecture | 会话 70000772-8a28-4b47-beb7-82f5a1e28360 | ARCH-DESIGN-1 | 已完成 |
+
+附注：ARCH-DESIGN-1 期间在 `../codeharness` 做只读验证时意外产生空 `.venv/`（gitignored）并使 uv 下载 CPython 至缓存；按不自动回滚纪律保留，T1 将在同一环境完成 `uv sync`（D5①授权）。
+
+## 10. 版本历史
+
+- v0.1（2026-10-26）：建立主文档；记录用户 6 项裁定、约束、需求解释与未决假设；派发两项有界探索。
+- v0.2（2026-10-26）：两项探索完成并核实交付物；A1–A4 验证成立、新增 A6；登记关键设计约束与遗留决策点（A5、发布形态、召回触发、面板、outputTap、MCP vs REST、config.json 复用）；派发 ARCH-DESIGN-1。
+- v0.3（2026-10-26）：ARCH-DESIGN-1 完成并核实（`architecture.md`）；用户二次裁定 D7–D11，A5/A6 关闭；填入 T1–T4 子任务表与四份任务简报（`tasks/T*.md`）；整体设计完成，待用户启动实施。
+- v0.4（2026-10-26）：T1 第 0 轮交付完成并经 orchestrator 亲验（三命令全绿、sideload 证据在位）；登记纠正第 1 轮（C3/C4/C4′/C1-B/L1）；C2 修订包汇入 architecture.md 与 T2/T3 简报；缺口 1/2/3/5 关闭、L2/L3 关闭、L4 归纠正轮；C1/L1 由 orchestrator 裁定（依据双方收敛结论）。

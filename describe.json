@@ -1,0 +1,20 @@
+{
+  "tools": [],
+  "events": [
+    {
+      "type": "nmem.started",
+      "description": {
+        "zh": "World 挂载完成。",
+        "en": "The World was mounted."
+      }
+    }
+  ],
+  "prompts": [
+    {
+      "key": "worlds.nmem.envPrompt",
+      "title": "Nowledge Mem · 环境提示词",
+      "role": "envPrompt",
+      "content": "Nowledge Mem 是一个可检索的长期记忆库。\n\n当前 World 只完成了挂载接线,还没有提供任何记忆工具;完整的召回与沉淀策略由后续任务落地。在此之前不要在对话里声称已经读取或写入 Nowledge Mem。\n"
+    }
+  ]
+}
