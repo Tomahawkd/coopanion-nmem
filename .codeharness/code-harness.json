@@ -4,6 +4,18 @@
   "exclude": [],
   "third_party_modules": ["cortico"],
   "checkers": {
+    "type.broad": {
+      "encoding": {
+        "instance_outputs": [
+          {
+            "path": "src/mem/client.ts",
+            "class_name": "MemClient",
+            "member": "send",
+            "arguments": [2]
+          }
+        ]
+      }
+    },
     "function_size": {
       "lines": 50, "statements": 50, "complexity": 10, "nesting": 3, "parameters": 5
     },
