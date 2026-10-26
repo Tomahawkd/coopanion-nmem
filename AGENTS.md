@@ -9,4 +9,4 @@
 5. **不自动回滚/还原/丢弃/删除代码改动**；门禁只读；不得以排除文件、调高阈值、刷新 baseline 制造通过。
 6. 不写实现注释与压制注释（JS/TS 唯一例外：批准的 next-line 诊断压制，须带精确规则 ID 与理由）。
 7. `describe.json` 与工具声明保持同步（一致性测试守护）；dry-mount/check 通过 ≠ 联网可用（`check:extension` 不验证真实服务）。
-8. 秘密只经部署 `.env`（`NMEM_API_KEY`），不进 config.json、日志、回执或测试快照。
+8. 秘密读取遵循框架 `ctx.secret()` 语义（进程环境变量优先于部署 `.env`；`NMEM_API_KEY`），key 仍不得进 config.json、日志、回执或测试快照。

@@ -50,10 +50,10 @@ World 只提供工具，何时调用由 Coo 自行决定（框架不提供对话
 - 文件路径：`~/Library/Application Support/Coopanion/home/companion/.env`
 - 文件不存在则创建，写入一行：`NMEM_API_KEY=nmem_...`
 - 值不得含空白字符（框架的 `storeSecret` 拒绝含空白值；CLI/手工写入同样应遵守）
-- key 只经部署 `.env` 提供：**不写入 `config.json`、不写日志、不在工具回执或错误信息中回显**
+- key 读取遵循框架 `ctx.secret()` 语义：**进程环境变量 `NMEM_API_KEY` 优先，其次部署 `.env`**（与 nmem CLI 的优先级一致）；key **不写入 `config.json`、不写日志、不在工具回执或错误信息中回显**
 - 本机免 key 的 Mem 不要配 key：本机服务带错 key 反而会返回 `401`，客户端在未配置 key 时**完全不发送** `Authorization` 头
 
-写入 `.env` 后重启 Coopanion 让客户端读到新 key（客户端在 World 创建时构造）。
+写入 `.env` 后重启 Coopanion 让客户端读到新 key（客户端在 World 创建时构造）；**该说明仅在进程环境中无同名 `NMEM_API_KEY` 变量时成立**——若宿主环境已设置该变量，其值优先生效，`.env` 中的轮换值会被遮蔽。
 
 ## 远程模式（未实测）
 
@@ -77,7 +77,7 @@ nmem config client set --api-key nmem_...
 
 - 本机 Nowledge Mem 的 `nmem-server` 实测监听 **`*:14242`（全部网卡）**，并非仅 `127.0.0.1`。这意味着同一网络内的其他设备可以访问该 API。**不受信网络环境请注意这个暴露面**（可自行用系统防火墙限制，或改为仅回环监听）。
 - 远程模式务必启用 API key（见上节）。
-- 本扩展只向配置的 `baseUrl` 发起请求，不向其他地址外联，也不回显 key。
+- 请求目的地址：本扩展发出的**首个请求**指向配置的 `baseUrl`；但 Node `fetch` 默认跟随服务端重定向（如 `307`），此时**请求正文会被转发到重定向目标**（鉴权头不会跨 origin 转发）。请在**信任的 Mem 服务端**下使用本扩展（本机默认即属此列）；远程场景请确认服务端可信性。本扩展不在日志或回执中回显 key。
 
 ## 验收 runbook（场景 A–D；E 本期不执行）
 
@@ -128,7 +128,7 @@ NMEM_CONTRACT_BASE_URL=http://127.0.0.1:14242 npx -y pnpm@11.28.6 vitest run tes
 - 覆盖内容：`GET /health` 探活；数据端点鉴权（带无效 key → `401`，不带鉴权头 → `200`；探活端点不鉴权，不能用来验鉴权）；`POST /memories/search` 的 `fast` 结果逐元素形态（`memory` 可为 `null`、`similarity_score` 为数值）与 `deep` 耗时信息记录（无阈值断言）。
 - 沙箱写读回：固定探针 id **`coopanion-nmem-contract-probe`**（labels `coopanion,contract-test`，溯源字段与插件写路径一致），断言 `action ∈ {created, updated}`、读回内容与 `metadata` 溯源字段一致，随后 `DELETE /memories/{id}` 自动清理并断言再读为 `404`。重复运行不会累积数据。
 - `agent_id` 规则：缺省 `coopanion` 可正常写入（由上一条承载）；中文样本 `大肥鱼` → 断言 Mem 返回 `422`（响应体摘要会打印留证）。
-- 契约测试会写入真实 Mem，但仅限上述固定探针 id，且运行结束即删除。
+- 契约测试会写入真实 Mem，但仅限上述固定探针 id；**断言全部通过后**才执行 `DELETE` 清理（失败中断的运行可能残留该固定 id 探针一次，下次运行会以同 id 覆写并在通过后清理，不会累积多条）。
 
 ## License
 
