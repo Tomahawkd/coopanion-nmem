@@ -1,8 +1,9 @@
 # T2 组内任务文档 / Worklog：Mem REST 客户端层
 
 - 任务标识：`T2-mem-client`｜主文档：`docs/dev/coopanion-mem-plugin/main.md` **v0.5**（D1–D11；T1 组级验收通过，基线 `496fd20` + 文档 `96a63c5`）
+- 主文档版本引用更新：**v0.6**（纠正第 2 轮已分配，本轮为当前授权内最后一轮；范围：C1+X2，验收口径 R1 定点复核撤阻/R2 无保留接受）
 - 简报：`tasks/T2.md`（含随附项 7：L5 一行修复 + ConfigGroup 旋钮集合守护测试）｜方案：`architecture.md` §1.2/§2a/§2e/§2f/§3.1/§4/§7（缺口 4/7）
-- 全局轮次：**第 0 轮（初始实施）**；全局纠正剩余额度 1（共享，本组无独立额度）
+- 全局轮次：第 0 轮已完成；**纠正第 2 轮（进行中）**；本轮关闭后全局纠正额度为 0
 - 本文档：T2 planner 维护；不构成新的需求或架构权威。实施结束后标记「实施已结束、待主文档汇入」。
 
 ## 1. 目标与边界（引用）
@@ -65,6 +66,49 @@
 
 | T2-R1×R2 交叉核对（分歧与前提互核） | reviewer / architecture | `T2-P3-XCHECK`（chat 原会话） | `43233eaf…` / `3ca19786…` | **双方完成**（15:39；收敛结论见 §6.7；R1 回执 `/tmp/t2-r1-review.L1SqJn/crosscheck.md`，R2 探针 `/tmp/t2-arch-r1-verify.mts`） |
 
+## 9. 纠正第 2 轮记录（2026-10-26，主文档 v0.6）
+
+前置核验：主文档 v0.6 §7 登记在案（范围 C1+X2 与本轮指派一致；X2 已批准并定稿于 architecture.md §4.1/§2f 澄清；本轮后全局额度归零）。派发前提满足。
+
+| 任务 | 角色 | operation | session | 状态 |
+| --- | --- | --- | --- | --- |
+| X2 声明落地 + 审计 | planner 执行（orchestrator 授权） | — | — | **完成**（15:46：`.codeharness/code-harness.json` 增 `type.broad.encoding.instance_outputs`（内容与批准件逐字一致）；落地后真仓库 `--all` **0 findings, exit 0**（此时 C1 未修，声明与 C1 内部函数无关） |
+| C1（R1-F1）修复 | coder | `T2-FIX2-CODER-C1` | `9feb69d7-f576-46ba-9f09-2ccf98f8da2c` | **完成**（15:50 回执；见 §9.2；证据 `/tmp/t2-fix2-evidence/`） |
+| R1 定点复核（F1 撤阻） | reviewer | `T2-FIX2-CLOSE`#1（chat 原会话） | `43233eaf…` | **仍阻**（15:54：发现同函数新回归 F1b：`-1` 落入 `Date.parse`→过去日期→0ms，违反「无效→1000ms」；planner 亲证复现 `Date.parse('-1')=978278400000`；详情 `/tmp/t2-r1-review.L1SqJn/fix2-review.md`） |
+| R2 条件 A/B 闭环确认 | architecture | `T2-FIX2-CLOSE`#2（chat 原会话） | `3ca19786…` | **无保留接受**（15:54：A/B 双闭环亲证——门禁 diff 纯增量逐字一致、真仓库全量审计 0 findings、登记义务全兑现、四命令亲跑 50/50；偏离知悉认可；附注：§7 缺口 4 闭环标记属 orchestrator 合入时补记） |
+| C1b（F1b 回归补修） | coder | `T2-FIX2B-CODER-NEG` | `886818ed-7341-434b-a1b1-f6e887761f11` | **完成**（15:56 回执；数值样字符串永不进 `Date.parse`，负数→1000ms；+1 用例独立 describe；51/51、0 findings、分支 97.1 不劣化；证据 `/tmp/t2-fix2b-evidence/`；planner 亲跑复现） |
+| R1 复核 #2 / R2 终态 delta 确认 | reviewer / architecture | `T2-FIX2-CLOSE2`（chat 原会话） | `43233eaf…` / `3ca19786…` | **双方完成**（15:58；见 §9.3） |
+
+### 9.3 闭环结论与轮次终态
+
+- **R1（reviewer，15:58）：撤回 C1/R1-F1（含 F1b）阻塞，实现侧接受当前修正状态。**亲跑 typecheck/51 用例/harness 0 findings；哈希比对确认补修仅限指派面；回执 `/tmp/t2-r1-review.L1SqJn/fix2b-acceptance.md`。
+- **R2（architecture，15:58）：无保留接受延伸至终态。**亲证 F1b 缺陷成立与补修形态正确（并自认其 15:54 读证侧漏检、联合准入结构起效）；附带收益确认（`'+1'` 旧实现同样落入 Date.parse→0ms，现正确按 +1s 等待，均在 §2f 澄清句语义内）；四命令亲跑；instance_outputs 声明仍精确匹配。
+- **终态四命令（planner 16:00 定档，证据 `/tmp/t2-final-evidence/`）**：typecheck 0｜test 51/51｜coverage 0（All 96.62/97.67/94.28；client.ts 94.63/**97.1**/95.23，未覆盖仅 85-92 缺省 fetch 适配器——T4 真实联测覆盖）｜harness **9 files, 0 findings, exit 0**（本轮起门禁全绿口径达成）。
+- **组级验收：通过。**必要验证（四命令，含 coverage）经 coder/planner/R1/R2 多方独立复跑全绿；阻塞（F1/F1b）全部关闭；R1 无阻塞接受、R2 无保留接受。X2 四条配套义务全部履行（§9.1 + 终态审计）。O1 已接受风险登记在主文档 v0.6；X4→T3、X5→T4 分流在案。
+- **会话总数**：第 0 轮 6 会话（coder×3/tester/reviewer/architecture×2）+ 纠正第 2 轮 5 会话（coder×2 + R1×2/R2×2 闭环 chat，均原会话），全部完成，无在途 operation。
+- **本轮提交**（分次逻辑提交，见 §9.4）。
+
+### 9.4 纠正第 2 轮提交记录
+
+提交后补记哈希（门禁声明 / C1+C1b 代码 / worklog 闭环）。
+
+**本轮状态标记：纠正第 2 轮已执行并闭环（2026-10-26 16:0x）——联合准入双方通过（R1 撤阻接受、R2 无保留接受），T2 组级验收完成；实施已结束，待主文档汇入。遗留：X4→T3、X5→T4（X6 仅记录）；architecture.md §7 缺口 4/7 的「已关闭（T2）」标记由 orchestrator 合入时补记（R2 附注）。**
+
+### 9.2 C1 结果摘要（coder 回执 + planner 复核）
+
+- **实现**：`retryAfterDelayMs` 三次序解析（null/空/纯空白→1000ms；非负数值→seconds×1000，纯数字 0 仍合法；否则 `Date.parse`→`max(0, date−Date.now())`；不可解析→1000ms）；新增 `rateLimitDelayMs`：delay > `MEM_TIMEOUT_MS` → `throw httpError(429, body)`（与终态 429 同构）不睡眠不重试；仅作用 429 指令，5xx 500ms 不变。`send`/`attempt` 结构与 stringify 调用形态未动。
+- **测试**：+7 用例（固定时钟）：未来 date +9000ms（8999 仍 1 次/+1 恰 2 次+请求一致）、过去 date→立即、空串→1000ms、纯空白→1000ms、纯数字 '0'→立即、'20' 与 date+20s→attempts=1+无睡眠+终态 MemRateLimitError；既有用例保留。总 50/50。
+- **四命令**：typecheck 0 / test 50/50 / coverage 不劣化（client.ts 分支 96.72→97.05）/ harness 9 files **0 findings, exit 0**（声明+修复后终态，planner 亲跑复现）。
+- **过程合规**：曾命中 1 条 `size.lines`（describe>50 行），拆 3 个 describe 收敛为 0，未压制/未改门禁。
+- **planner 裁定登记的偏离**：①派发文本「+60s 未来 date」示例与收敛清单第 4 项（>10s fail-fast）互斥——属任务文本缺陷，按已登记收敛清单为准，等待语义用 +9000ms 覆盖（+60s 场景必落 fail-fast，另有 '20'/+20s 用例覆盖）；②多出「纯数字 0→立即重发」用例（修复项 3 边界固定），未扩大实现范围。两偏离均送 R1/R2 复核确认。
+
+### 9.1 X2 落地登记（义务③）
+
+- **决定**：`checkers.type.broad.encoding.instance_outputs: [{"path":"src/mem/client.ts","class_name":"MemClient","member":"send","arguments":[2]}]`（orchestrator 2026-10-26 批准，architecture.md §4.1 定稿）。
+- **理由**：`JSON.stringify` 载体经私有方法链转发至 `this.send` 第 3 参，通用 `outputs` 无法表达（fetch 全局无 import 身份）；该声明精确到文件/类/成员/参数位，planner 与 architecture 双探针证有效（0 findings）与最小（三组负对照仍报）；「审批即信任注入实现」前提经 R1 代码侧复核成立（§6.7）。
+- **移除/复审条件**：`send` 的 body 语义或 `transport` 契约出现非出口消费者时复审；`send` 签名/路径变化声明即惰性失效、finding 回归（fail-closed，探针亲证机制）。
+- **收口证据**：落地后真仓库全量审计 `0 findings, exit 0`（§9 表；C1 后将复跑作终态收口）。
+
 ### 6.4 P2F 结果摘要（coder 回执）
 
 - 仅改 `tests/mem-client.test.ts`：新增 `expectSameRequest` 辅助；G6 就地补 429/503 重试一致性断言 + 新增独立 describe 两条跨方法用例（POST+鉴权重发、GET 无 body 重发）；G1 补 504 间隔边界（499/500ms 双点）；G2 新增非 Error 抛出用例。用例 33→36，总 43。
@@ -123,9 +167,9 @@
 
 | # | 项 | 状态 | 去向 |
 | --- | --- | --- | --- |
-| X1 | R1-F1（Retry-After 双形式+边界+fail-fast 上限） | 待纠正轮（准入条件 B，范围已收敛见 §6.7） | 用户→orchestrator 登记轮次 |
-| X2 | 缺口 4 门禁声明（instance_outputs）待批准 | 升级包就绪（§8.2，R2 建议采纳+四条配套义务）；门禁文件冻结 | 用户→orchestrator（策略变更流程） |
-| X3 | O1 重试重复写风险登记 | 措辞已约束（§6.7） | 主文档登记一句已接受风险 |
+| X1 | R1-F1（Retry-After 双形式+边界+fail-fast 上限） | **已关闭（纠正第 2 轮 C1+C1b）**：双形式解析、空/空白/负值→1000ms、>10s fail-fast；51 用例含 8 条边界；R1 撤阻、R2 接受 | — |
+| X2 | 缺口 4 门禁声明（instance_outputs）待批准 | **已关闭（纠正第 2 轮 X2 落地）**：声明落地、全量审计 0 findings、四条义务履行（§9.1） | §7 缺口 4 关闭标记由 orchestrator 合入时补记 |
+| X3 | O1 重试重复写风险登记 | **已登记**（主文档 v0.6：已接受风险+措辞约束+升级触发条件） | — |
 | X4 | 错误 excerpt/transport 消息未脱敏（上游回显即保留） | R1 定性非阻塞；设计注意 | T3（回执不原样透传 excerpt） |
 | X5 | `/health` 本机不鉴权，探活测不出 key 失效 | O2 | T4（鉴权验证对数据端点） |
 | X6 | OpenAPI 允许 `memory`/`id` 缺失→客户端响亮失败 | O3，符合 §2f，双方接受 | 无需动作（记录） |
@@ -133,7 +177,7 @@
 
 ## 8. 第 0 轮交接材料（组级未验收，待 orchestrator 登记纠正轮）
 
-**状态**：初始实现（P1→P1F→P2→P2F）与联合准入（R1/R2+交叉核对）全部完成；双方收敛「**需修改后接受**」；阻塞 R1-F1 未修，本组未标记组级验收。工作树已按逻辑分次提交（§8.3）。
+**状态（纠正第 2 轮后更新）**：初始实现与联合准入收敛已完成；**纠正第 2 轮已执行并闭环（§9），组级验收通过**；X1（C1）/X2 已关闭，X3 已登记主文档；X4→T3、X5→T4 分流在案。本文档实施记录完结，待主文档汇入。
 
 ### 8.1 纠正包提案（供 orchestrator 登记轮次与范围）
 
