@@ -1,7 +1,7 @@
 # 需求主文档：Coopanion × Nowledge Mem 插件（coopanion-mem-plugin）
 
 - 需求标识：`coopanion-mem-plugin`
-- 主文档版本：v1.1（后续需求 F1：文档英文化与远端发布，用户直接指令，orchestrator 执行）
+- 主文档版本：v1.2（发布准备就绪：tags/repo/changelog 已补，待 npm publish）
 - 项目仓库：`/Users/tomahawkd/Documents/projects/coopanion-nmem`（本仓库，尚无 git）
 - 需求开发目录：`docs/dev/coopanion-mem-plugin/`（用户 2026-10-26 裁定）
 - 最后更新：2026-10-26 21:40 CST，由 orchestrator 维护
@@ -135,6 +135,7 @@
 - v0.12（2026-10-26）：用户选方案 A——授权验收收口修正轮（B1/C1/N1 文档层四点范围，归 T4，reviewer 定点复核撤阻后出最终结论）。
 - v1.0（2026-10-26）：验收收口轮闭环（`c954695` 恰两文件 5 处、reviewer 撤阻 B1/C1、N1 确认，准入终态接受；四命令全绿亲验）；三方验收意见全部通过；**最终验收结论：通过**；残余清单与后续可选项归档；需求流程结束。
 - v1.1（2026-10-26）：后续需求 F1（见 §11）——AGENTS/README 英文化、README.cn.md 互链、rebase 到远端 LICENSE 提交并推送。
+- v1.2（2026-10-26）：发布准备（用户指令）——`cortico.tags: ["memory"]`、repository/bugs/homepage 链接、CHANGELOG.md（0.1.0）；files 白名单纳入 README.cn/CHANGELOG；npm pack 预检 14 文件；四命令复验绿；提交 `d75a38b` 并推送（SSH 走 ssh.github.com:443，22 端口被网络劫持）。待用户 npm publish + `[sync]` 收录。
 
 ## 11. 后续需求 F1：文档英文化与远端发布（2026-10-26，用户直接指令，orchestrator 执行）
 
