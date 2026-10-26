@@ -1,5 +1,134 @@
 {
-  "tools": [],
+  "tools": [
+    {
+      "name": "nmem_search",
+      "description": "Search the Nowledge Mem long-term memory library and return matching memories with ids, titles, similarity scores and short excerpts. Use nmem_get with an id to read one memory in full.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "What to look for: a topic, a person, a preference, a past decision or a project."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10,
+            "description": "How many memories to return; defaults to the configured searchLimit."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "fast",
+              "deep"
+            ],
+            "description": "Search mode: fast is low latency, deep is more exhaustive; defaults to the configured searchMode."
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "tags": [
+        "read"
+      ],
+      "summary": {
+        "zh": "在 Nowledge Mem 长期记忆库里检索记忆,返回 id、标题、相似度与摘要。",
+        "en": "Searches the Nowledge Mem library and returns ids, titles, similarity scores and excerpts."
+      }
+    },
+    {
+      "name": "nmem_get",
+      "description": "Read one Nowledge Mem memory in full by id. Use ids from nmem_search receipts; a missing id returns a not-found message instead of an error.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The memory id, as returned by nmem_search or nmem_save."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "tags": [
+        "read"
+      ],
+      "summary": {
+        "zh": "按 id 读取一条记忆的全文。",
+        "en": "Reads one Nowledge Mem memory in full by id."
+      }
+    },
+    {
+      "name": "nmem_save",
+      "description": "Save a durable memory to the Nowledge Mem library. Omit id to create a new memory; pass an id from nmem_search to update that memory in place (upsert). Keep one memory focused, self-contained and under 30000 characters.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 30000,
+            "description": "The memory itself, written so it still makes sense out of this conversation."
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Id of an existing memory to update; omit it to create a new memory."
+          },
+          "title": {
+            "type": "string",
+            "description": "Short title shown in search receipts."
+          },
+          "unit_type": {
+            "type": "string",
+            "enum": [
+              "fact",
+              "preference",
+              "decision",
+              "plan",
+              "procedure",
+              "learning",
+              "context",
+              "event"
+            ],
+            "description": "What kind of knowledge this memory holds."
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Extra labels for filtering in Nowledge Mem; the coopanion label is always added."
+          },
+          "importance": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "How important the memory is, from 0 to 1."
+          }
+        },
+        "required": [
+          "content"
+        ]
+      },
+      "tags": [
+        "write"
+      ],
+      "summary": {
+        "zh": "把一条值得长期保留的记忆写入 Nowledge Mem;带 id 时更新既有记忆。",
+        "en": "Saves a durable memory to Nowledge Mem; an id updates the existing memory."
+      }
+    }
+  ],
   "events": [
     {
       "type": "nmem.started",
@@ -14,7 +143,7 @@
       "key": "worlds.nmem.envPrompt",
       "title": "Nowledge Mem · 环境提示词",
       "role": "envPrompt",
-      "content": "Nowledge Mem 是一个可检索的长期记忆库。\n\n当前 World 只完成了挂载接线,还没有提供任何记忆工具;完整的召回与沉淀策略由后续任务落地。在此之前不要在对话里声称已经读取或写入 Nowledge Mem。\n"
+      "content": "Nowledge Mem is a searchable long-term memory library shared with the user across conversations.\n\nReading memories:\n- Call nmem_search before answering anything that depends on the user's facts, preferences, past decisions or history that the current context does not show. Searching once when a conversation starts is usually enough; search again when a new topic needs it.\n- Use nmem_get with an id from a search receipt when you need the whole memory instead of the excerpt.\n\nSaving memories:\n- Call nmem_save for facts, preferences and decisions worth keeping beyond this conversation: stable personal details, working agreements, project decisions, conclusions you would otherwise miss next time. Do not save small talk, transient state or anything the user asked you to forget.\n- Keep each memory focused on one thing and self-contained: state the fact plus the little context needed to use it later, in plain language, and stay well under 30000 characters.\n- To correct or extend something already stored, search first, take the id from the receipt and call nmem_save with that id: the save updates the existing memory instead of creating a duplicate.\n\nPARTNER.md and Nowledge Mem work side by side:\n- Keep maintaining PARTNER.md exactly as you do today; it remains the workspace note the user and your persona rely on. Save the same fact to Nowledge Mem with nmem_save as well. Nowledge Mem does not replace PARTNER.md, and PARTNER.md does not replace Nowledge Mem.\n\nWhen a tool fails:\n- Tell the user briefly that Nowledge Mem is unavailable, not configured or rejected the request, then keep helping with what you have. Do not retry the same call repeatedly, do not guess what a memory said, and never claim you read or saved something when the receipt reported a failure.\n"
     }
   ]
 }

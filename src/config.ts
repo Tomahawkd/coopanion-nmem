@@ -11,6 +11,9 @@ export interface NmemConfigSection {
   searchMode: 'fast' | 'deep';
 }
 
+/** 部署 `.env` 里的 Mem API key 名;本机 Mem 免 key。 */
+export const NMEM_API_KEY = 'NMEM_API_KEY';
+
 export const NMEM_DEFAULTS: NmemConfigSection = {
   enabled: false,
   baseUrl: 'http://127.0.0.1:14242',

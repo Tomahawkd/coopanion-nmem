@@ -2,16 +2,21 @@ import { fileURLToPath } from 'node:url';
 import type { ToolDef, World, WorldHost, WorldWebUiDecl } from 'cortico/core/types.ts';
 import { nowIso } from 'cortico/core/util.ts';
 import { NMEM_CONFIG_GROUP, type NmemConfigSection } from './config.ts';
+import { nmemTools, type NmemToolClient } from './tools.ts';
 
 const ENV_PROMPT_FILE = fileURLToPath(new URL('./ENV_PROMPT.md', import.meta.url));
 
 export interface NmemWorldOptions {
-  /** `worlds.nmem` 的活引用。 */
+  /** `worlds.nmem` 的活引用:工具每次调用现读缺省条数与检索模式。 */
   cfg: NmemConfigSection;
   timezone: string;
+  /** 写进记忆溯源 `agent_id` 的身份。 */
+  botName: string;
+  /** Mem 客户端;组合根注入真实 `MemClient`,测试注入手写 fake。 */
+  client: NmemToolClient;
 }
 
-/** Nowledge Mem World:当前只提供挂载事件,记忆工具由后续任务接入。 */
+/** Nowledge Mem World:挂载事件 + 搜索/读取/沉淀三个记忆工具。 */
 export class NmemWorld implements World {
   readonly id = 'nmem';
 
@@ -23,7 +28,7 @@ export class NmemWorld implements World {
   }
 
   tools(): ToolDef[] {
-    return [];
+    return nmemTools({ client: this.opts.client, cfg: this.opts.cfg, botName: this.opts.botName });
   }
 
   webUi(): WorldWebUiDecl {
@@ -50,7 +55,7 @@ export class NmemWorld implements World {
       source: this.id,
       origin: 'internal',
       senderKey: this.id,
-      text: 'Nowledge Mem World 已挂载。',
+      text: 'Nowledge Mem World 已挂载,nmem_search/nmem_get/nmem_save 可用。',
     });
   }
 

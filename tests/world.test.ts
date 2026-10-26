@@ -2,9 +2,20 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { Logger, ToolCallContext, ToolDef, ToolOutcome } from 'cortico/core/types.ts';
 import { dryMountWorld, fakeWorldContext } from 'cortico/extensions/dry-mount.ts';
+import type { WorldContext } from 'cortico/world.ts';
 import { NMEM } from '../src/definition.ts';
-import { NMEM_CONFIG_GROUP, NMEM_DEFAULTS } from '../src/config.ts';
+import { NMEM_CONFIG_GROUP, NMEM_DEFAULTS, type NmemConfigSection } from '../src/config.ts';
+import type {
+  MemoryHit,
+  MemoryRecord,
+  MemorySavePayload,
+  MemorySaveResult,
+  MemorySearchOptions,
+} from '../src/mem/types.ts';
+import type { NmemToolClient } from '../src/tools.ts';
+import { NmemWorld } from '../src/world.ts';
 import describeFile from '../describe.json';
 import { FakeHost } from './helpers/fake-host.ts';
 
@@ -12,7 +23,65 @@ let scratchDir: string;
 beforeEach(() => { scratchDir = mkdtempSync(join(tmpdir(), 'nmem-world-')); });
 afterEach(() => rmSync(scratchDir, { recursive: true, force: true }));
 
-describe('Nowledge Mem World', () => {
+const NOOP_LOGGER: Logger = {
+  trace: () => {},
+  debug: () => {},
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+  emit: () => {},
+  child: () => NOOP_LOGGER,
+};
+
+const CALL: ToolCallContext = { role: 'test', log: NOOP_LOGGER };
+
+class RecordingClient implements NmemToolClient {
+  searchCalls: { query: string; options?: MemorySearchOptions }[] = [];
+  getCalls: string[] = [];
+  saveCalls: MemorySavePayload[] = [];
+  hits: MemoryHit[] = [];
+
+  async searchMemories(query: string, options?: MemorySearchOptions): Promise<MemoryHit[]> {
+    this.searchCalls.push({ query, options });
+    return this.hits;
+  }
+
+  async getMemory(id: string): Promise<MemoryRecord | null> {
+    this.getCalls.push(id);
+    return null;
+  }
+
+  async saveMemory(payload: MemorySavePayload): Promise<MemorySaveResult> {
+    this.saveCalls.push(payload);
+    return { memory: { id: 'mem-fake', content: 'fake' }, action: 'created' };
+  }
+}
+
+function textOf(result: string | ToolOutcome): string {
+  return typeof result === 'string' ? result : result.text;
+}
+
+function toolNamed(tools: ToolDef[], name: string): ToolDef {
+  const found = tools.find((candidate) => candidate.name === name);
+  if (found === undefined) throw new Error(`工具未声明:${name}`);
+  return found;
+}
+
+function worldWithFakeClient(client: NmemToolClient): {
+  world: NmemWorld;
+  ctx: WorldContext<NmemConfigSection>;
+} {
+  const ctx = fakeWorldContext(NMEM, { scratchDir });
+  const world = new NmemWorld({
+    cfg: ctx.cfg,
+    timezone: ctx.timezone,
+    botName: ctx.botName,
+    client,
+  });
+  return { world, ctx };
+}
+
+describe('Nowledge Mem World 挂载', () => {
   it('干装载不报失败:装载器会接受它', async () => {
     const report = await dryMountWorld(NMEM, { scratchDir, packageDir: process.cwd() });
     expect(report.failures).toEqual([]);
@@ -30,6 +99,8 @@ describe('Nowledge Mem World', () => {
     expect(host.events.map((e) => e.type)).toEqual(['nmem.started']);
     expect(host.events[0].origin).toBe('internal');
     expect(host.events[0].source).toBe('nmem');
+    expect(host.events[0].text).toBe('Nowledge Mem World 已挂载,nmem_search/nmem_get/nmem_save 可用。');
+    expect(host.pushOpts).toEqual([undefined]);
     expect(host.store.latestCursor()).toBe(1);
     expect(host.store.get(1)?.type).toBe('nmem.started');
     expect(host.store.range({})).toEqual(host.events);
@@ -37,10 +108,14 @@ describe('Nowledge Mem World', () => {
     expect(host.store.grep({ keyword: '挂载', context: 0 })).toHaveLength(1);
     await world.stop();
   });
+});
 
-  it('当前不提供工具,环境变量表为空', () => {
+describe('Nowledge Mem World 工具与配置', () => {
+  it('提供三个记忆工具,环境变量表仍为空', () => {
     const world = NMEM.create(fakeWorldContext(NMEM, { scratchDir }));
-    expect(world.tools()).toEqual([]);
+    const tools = world.tools();
+    expect(tools.map((tool) => tool.name)).toEqual(['nmem_search', 'nmem_get', 'nmem_save']);
+    expect(tools.map((tool) => tool.tags)).toEqual([['read'], ['read'], ['write']]);
     expect(world.envPromptVars()).toEqual({});
   });
 
@@ -52,10 +127,18 @@ describe('Nowledge Mem World', () => {
     ]);
     expect(NMEM_CONFIG_GROUP.schema.properties).not.toHaveProperty('worlds.nmem.enabled');
   });
+});
 
+describe('Nowledge Mem World 自描述', () => {
   it('describe.json 与定义中的工具、事件及 ENV_PROMPT 内容一致', () => {
     const world = NMEM.create(fakeWorldContext(NMEM, { scratchDir }));
     const envDocs = (world.webUi?.().promptDocs ?? []).filter((doc) => doc.role === 'envPrompt');
+    expect(envDocs.map((doc) => doc.key)).toEqual(['worlds.nmem.envPrompt']);
+    expect(describeFile.tools.map((tool) => tool.name)).toEqual([
+      'nmem_search',
+      'nmem_get',
+      'nmem_save',
+    ]);
     expect(describeFile.tools).toEqual(NMEM.describe?.tools ?? []);
     expect(describeFile.events).toEqual(NMEM.describe?.events ?? []);
     expect(describeFile.prompts).toEqual(envDocs.map((doc) => ({
@@ -64,6 +147,33 @@ describe('Nowledge Mem World', () => {
       role: doc.role,
       content: readFileSync(doc.path, 'utf8'),
     })));
+  });
+});
+
+describe('Nowledge Mem World 接线', () => {
+  it('envPromptVars 返回空表且不发起任何 Mem I/O', () => {
+    const client = new RecordingClient();
+    const { world } = worldWithFakeClient(client);
+    expect(world.envPromptVars()).toEqual({});
+    expect(client.searchCalls).toEqual([]);
+    expect(client.getCalls).toEqual([]);
+    expect(client.saveCalls).toEqual([]);
+  });
+
+  it('注入的 client 决定回执,cfg 热改后缺省值随读随新', async () => {
+    const client = new RecordingClient();
+    client.hits = [
+      { memory: { id: 'mem-1', content: '用户的猫叫 Pixel', title: '猫' }, similarity_score: 0.9 },
+    ];
+    const { world, ctx } = worldWithFakeClient(client);
+    const search = toolNamed(world.tools(), 'nmem_search');
+    expect(textOf(await search.handler({ query: '猫' }, CALL))).toBe(
+      '找到 1 条相关记忆:\n1. [0.90] 猫 — 用户的猫叫 Pixel(id: mem-1)\n需要全文时,用 nmem_get 按 id 读取。',
+    );
+    expect(client.searchCalls[0]?.options).toEqual({ limit: 5, mode: 'fast' });
+    ctx.persist({ searchLimit: 8, searchMode: 'deep' });
+    await search.handler({ query: '猫' }, CALL);
+    expect(client.searchCalls[1]?.options).toEqual({ limit: 8, mode: 'deep' });
   });
 });
 
