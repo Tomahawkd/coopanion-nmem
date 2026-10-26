@@ -54,12 +54,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
           registry-url: https://registry.npmjs.org
 
       - name: Release tag must match package.json version
@@ -71,7 +68,27 @@ jobs:
             exit 1
           fi
 
-      - name: Publish to npm
-        run: pnpm publish --no-git-checks
+      # npm policy: CI stages the package; the final publish requires
+      # proof-of-presence (2FA) and is approved by the maintainer with:
+      #   npm stage list
+      #   npm stage approve <stage-id>
+      - name: Stage publish (awaits maintainer approval)
+        id: stage
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm stage publish ./ | tee stage-output.txt
+          {
+            echo "## Staged for publishing (awaiting approval)"
+            echo
+            echo '```'
+            cat stage-output.txt
+            echo '```'
+            echo
+            echo "Approve locally with: \`npm stage approve <stage-id>\` (requires 2FA)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: List staged versions
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm stage list
