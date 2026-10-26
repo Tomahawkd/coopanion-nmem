@@ -182,16 +182,29 @@ function requestHeaders(apiKey: string, hasBody: boolean): MemRequestHeaders {
 }
 
 function retryDelayMs(reply: MemReply): number | null {
-  if (reply.status === 429) return retryAfterDelayMs(reply.headers.get('Retry-After'));
+  if (reply.status === 429) return rateLimitDelayMs(reply);
   if (RETRYABLE_SERVER_STATUSES.includes(reply.status)) return SERVER_RETRY_DELAY_MS;
   return null;
 }
 
+function rateLimitDelayMs(reply: MemReply): number {
+  const delay = retryAfterDelayMs(reply.headers.get('Retry-After'));
+  if (delay > MEM_TIMEOUT_MS) throw httpError(reply.status, reply.body);
+  return delay;
+}
+
 function retryAfterDelayMs(header: string | null): number {
   if (header === null) return RATE_LIMIT_RETRY_DELAY_MS;
-  const seconds = Number(header.trim());
-  if (!Number.isFinite(seconds) || seconds < 0) return RATE_LIMIT_RETRY_DELAY_MS;
-  return seconds * 1000;
+  const value = header.trim();
+  if (value === '') return RATE_LIMIT_RETRY_DELAY_MS;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds)) {
+    if (seconds >= 0) return seconds * 1000;
+    return RATE_LIMIT_RETRY_DELAY_MS;
+  }
+  const retryAt = Date.parse(value);
+  if (Number.isNaN(retryAt)) return RATE_LIMIT_RETRY_DELAY_MS;
+  return Math.max(0, retryAt - Date.now());
 }
 
 function expectOk(reply: MemReply): string {

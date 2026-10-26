@@ -46,6 +46,25 @@ function jsonResponse(status: number, body: string, headers?: Headers): MemRespo
   return { status, headers: headers ?? new Headers(), text: async () => body };
 }
 
+function headerResponse(status: number, body: string, retryAfter: string): MemResponse {
+  return {
+    status,
+    headers: { get: (name: string) => (name === 'Retry-After' ? retryAfter : null) },
+    text: async () => body,
+  };
+}
+
+const FIXED_NOW = new Date('2026-10-26T12:00:00Z');
+
+function useFixedClock(): void {
+  vi.useFakeTimers();
+  vi.setSystemTime(FIXED_NOW);
+}
+
+function httpDateAfter(offsetMs: number): string {
+  return new Date(FIXED_NOW.getTime() + offsetMs).toUTCString();
+}
+
 const SEARCH_HIT_BODY =
   '[{"memory":{"id":"m1","content":"用户的猫叫 Pixel","title":"猫"},"similarity_score":0.87},'
   + '{"memory":null,"similarity_score":0.2}]';
@@ -267,6 +286,132 @@ describe('MemClient 429 限流重试', () => {
     await vi.advanceTimersByTimeAsync(1);
     await expect(call).resolves.toEqual([]);
     expect(calls).toHaveLength(2);
+  });
+});
+
+describe('MemClient 429 Retry-After 双形式与上限', () => {
+  it('Retry-After 为未来 HTTP-date 时未到期不重发,到期才重发且请求逐字段一致', async () => {
+    useFixedClock();
+    const { transport, calls } = stubTransport(
+      jsonResponse(429, 'slow down', new Headers({ 'Retry-After': httpDateAfter(9_000) })),
+      jsonResponse(200, '[]'),
+    );
+    const client = new MemClient({ baseUrl: BASE_URL, transport });
+    const call = client.searchMemories('cat');
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(8_999);
+    expect(calls).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(1);
+    await expect(call).resolves.toEqual([]);
+    expect(calls).toHaveLength(2);
+    expectSameRequest(calls[1], calls[0]);
+  });
+
+  it('Retry-After 为过去的 HTTP-date 时立即重发', async () => {
+    useFixedClock();
+    const { transport, calls } = stubTransport(
+      jsonResponse(429, 'slow down', new Headers({ 'Retry-After': httpDateAfter(-60_000) })),
+      jsonResponse(200, '[]'),
+    );
+    const client = new MemClient({ baseUrl: BASE_URL, transport });
+    const call = client.searchMemories('cat');
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(calls).toHaveLength(2);
+    await expect(call).resolves.toEqual([]);
+    expectSameRequest(calls[1], calls[0]);
+  });
+});
+
+describe('MemClient 429 Retry-After 空值与缺省回退', () => {
+  it('Retry-After 为空串时按 1000ms 缺省退避', async () => {
+    useFixedClock();
+    const { transport, calls } = stubTransport(headerResponse(429, 'slow down', ''), jsonResponse(200, '[]'));
+    const client = new MemClient({ baseUrl: BASE_URL, transport });
+    const call = client.searchMemories('cat');
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(999);
+    expect(calls).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(1);
+    await expect(call).resolves.toEqual([]);
+    expect(calls).toHaveLength(2);
+  });
+
+  it('Retry-After 为纯空白时按 1000ms 缺省退避', async () => {
+    useFixedClock();
+    const { transport, calls } = stubTransport(headerResponse(429, 'slow down', '   '), jsonResponse(200, '[]'));
+    const client = new MemClient({ baseUrl: BASE_URL, transport });
+    const call = client.searchMemories('cat');
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(999);
+    expect(calls).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(1);
+    await expect(call).resolves.toEqual([]);
+    expect(calls).toHaveLength(2);
+  });
+
+  it('Retry-After 为纯数字 0 时立即重发', async () => {
+    useFixedClock();
+    const { transport, calls } = stubTransport(
+      jsonResponse(429, 'slow down', new Headers({ 'Retry-After': '0' })),
+      jsonResponse(200, '[]'),
+    );
+    const client = new MemClient({ baseUrl: BASE_URL, transport });
+    const call = client.searchMemories('cat');
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(calls).toHaveLength(2);
+    await expect(call).resolves.toEqual([]);
+  });
+});
+
+describe('MemClient 429 Retry-After 负值回退', () => {
+  it('Retry-After 为负数时按 1000ms 缺省退避', async () => {
+    useFixedClock();
+    const { transport, calls } = stubTransport(
+      jsonResponse(429, 'slow down', new Headers({ 'Retry-After': '-1' })),
+      jsonResponse(200, '[]'),
+    );
+    const client = new MemClient({ baseUrl: BASE_URL, transport });
+    const call = client.searchMemories('cat');
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(999);
+    expect(calls).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(1);
+    await expect(call).resolves.toEqual([]);
+    expect(calls).toHaveLength(2);
+  });
+});
+
+describe('MemClient 429 Retry-After 等待上限', () => {
+  it('Retry-After 秒数超过 10s 时不睡眠不重试,立即抛 MemRateLimitError', async () => {
+    useFixedClock();
+    const { transport, calls } = stubTransport(
+      jsonResponse(429, 'slow down', new Headers({ 'Retry-After': '20' })),
+    );
+    const client = new MemClient({ baseUrl: BASE_URL, transport });
+    await expect(client.searchMemories('cat')).rejects.toMatchObject({
+      name: 'MemRateLimitError',
+      status: 429,
+      excerpt: 'slow down',
+    });
+    expect(calls).toHaveLength(1);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('Retry-After 的 HTTP-date 超过 10s 时不睡眠不重试,立即抛 MemRateLimitError', async () => {
+    useFixedClock();
+    const { transport, calls } = stubTransport(
+      jsonResponse(429, 'slow down', new Headers({ 'Retry-After': httpDateAfter(20_000) })),
+    );
+    const client = new MemClient({ baseUrl: BASE_URL, transport });
+    await expect(client.searchMemories('cat')).rejects.toMatchObject({
+      name: 'MemRateLimitError',
+      status: 429,
+      excerpt: 'slow down',
+    });
+    expect(calls).toHaveLength(1);
+    expect(vi.getTimerCount()).toBe(0);
   });
 });
 
