@@ -1,5 +1,8 @@
 # cortico-world-nmem
 
+[English](README.md) | 简体中文
+
+
 为 [Coopanion](https://github.com/Pal-AI-Lab/Coopanion) 的桌宠 Coo 提供 Nowledge Mem 记忆库接入的 Cortico World 扩展（`kind: world`，`api: 6`，TypeScript / ESM，零运行时依赖）。
 
 它把 Coo 与 Nowledge Mem 双向打通：**读**——Coo 在需要回忆时检索/读取 Mem；**写**——对话中出现的持久事实、偏好与决定可沉淀进 Mem。Coo 内置的 `PARTNER.md` 工作记忆不受影响，两套记忆并行维护。
