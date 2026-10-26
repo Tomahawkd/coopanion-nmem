@@ -4,6 +4,14 @@
   "type": "module",
   "description": "Cortico World: connect Coo to a Nowledge Mem memory library",
   "license": "MIT",
+  "homepage": "https://github.com/Tomahawkd/coopanion-nmem#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Tomahawkd/coopanion-nmem.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Tomahawkd/coopanion-nmem/issues"
+  },
   "keywords": [
     "cortico-world",
     "cortico"
@@ -16,12 +24,14 @@
   "cortico": {
     "kind": "world",
     "api": 6,
-    "tags": [],
+    "tags": ["memory"],
     "describe": "describe.json"
   },
   "files": [
     "src",
     "README.md",
+    "README.cn.md",
+    "CHANGELOG.md",
     "describe.json"
   ],
   "scripts": {
