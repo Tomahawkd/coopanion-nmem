@@ -190,7 +190,7 @@ coopanion-nmem/
 | --- | --- | --- |
 | 传输失败/超时（固定 10s，`AbortController`，B47 brave-client 同法） | 不重试（本机 Mem 未启动是最常见原因，立即诚实失败） | `failed:true` +「Nowledge Mem 不可达（…）：请确认 Mem 正在运行」 |
 | 401 | **不重试**（错 key 重试会触发 429 限流，R3） | `failed:true` +「认证失败：API key 无效或已轮转」 |
-| 429 | 单次退避重试（`Retry-After` 头或缺省 1000ms），再失败即止 | `failed:true` +「Mem 限流，请稍后再试」 |
+| 429 | 单次退避重试，再失败即止。**澄清（T2 纠正轮登记）**：`Retry-After` 按标准双形式解析（delay-seconds / HTTP-date，RFC 9110 §10.2.3）：非负秒照旧；HTTP-date 取 `max(0, date−本地时钟)`；空/无效/纯空白 → 1000ms 缺省；指令等待 >10s（对齐 `MEM_TIMEOUT_MS`）→ 不睡眠不重试、立即 `MemRateLimitError` fail-fast | `failed:true` +「Mem 限流，请稍后再试」 |
 | 502/503/504 | 单次重试（500ms） | 重试后仍失败 → `failed:true` +「Mem 服务端错误」 |
 | 4xx 其他 | 不重试 | `failed:true` + 状态码与响应摘要（截断） |
 | 响应形状不可解析 | `MemProtocolError`（防 R4 形态漂移） | `failed:true` +「Mem 响应异常，可能版本不兼容」 |
@@ -298,7 +298,7 @@ coopanion-nmem/
 - 边界语义（README：模式大小写敏感、`*` 跨斜杠、JS/TS 相对导入同时匹配根相对路径带/不带扩展名，故 config 边界同时列多种写法）。
 - **全局 `fetch` 无法被 import 边界捕获**（Node 22 全局，非导入）：「工具层不得绕过 client 直连 fetch」以两条近似强制——禁 `node:http(s)`/`undici`/`axios` 导入（覆盖显式拉网络库的路径）+ 语义评审义务（门禁不证明运行时行为，属 README「Enforcement and limits」声明的边界）。单测的 transport 注入缝也让「client 是唯一传输所有者」可被评审直接观察。
 - `third_party_modules` 匹配方式**已实测定稿（T1，2026-10-26）**：按精确 specifier 匹配，`"cortico"` 与 `"cortico/*"` 均不覆盖路径形导入（`cortico/world.ts` 等，条目惰性）；精确列举虽可匹配但产生 6 条 `type.boundary` 误报（门禁不做类型推断，把已类型化框架函数结果判为未收窄），`vitest` 列入产生 22 条 `expect()` 链误报。**定稿：保留惰性 `"cortico"`、不列 `vitest`**；类型安全由 `tsc --noEmit`（strict）承担，`src/mem/*` 禁 cortico import 由 `architecture.import` 边界实测兜底（T1-R2 探针命中）。
-- `JSON.stringify` 在 HTTP 请求体出口属合法 egress，但门禁的 `type.broad` 只识别列出的输出位——若 T2 实测报告该点，按 checker-configuration.md 增加 reviewed `type.broad.encoding.outputs` 声明（`fetch` 调用、body 参数位），该变更属策略变更，需全量审计 + architecture 审查（codeharness AGENTS 纪律）。
+- **`JSON.stringify` 请求体出口声明——已批准定稿（2026-10-26，T2 缺口 4 升级包 X2，orchestrator 批准）**：实测触发形态为经 `this.send` 的 body 位（非预想的 `fetch` 调用位）；最终机制：`checkers.type.broad.encoding.instance_outputs: [{"path":"src/mem/client.ts","class_name":"MemClient","member":"send","arguments":[2]}]`。有效性/最小性双探针证（三组负对照）；配套义务：①批准经 orchestrator（冻结文件变更）；②落地后真仓库 `--all` 全量审计 0 findings 作收口证据；③主文档/worklog 登记决定、理由与移除条件（`send` body 语义或 transport 契约出现非出口消费者时复审）；④声明随源快照 fail-closed（`send` 签名/路径变化即惰性失效、finding 回归）。
 - 不配置 `architecture.object_model`：包内入口已是类所有（`MemClient`/`NmemWorld`），模块级常量（`NMEM_TOOL_DECLS`）是 cortico 模板约定的数据声明而非过程入口；如后续出现函数式扩展点再收紧。
 - `include` 覆盖 `src/ENV_PROMPT.md` 但门禁只分析受支持语言文件，markdown 不受影响；`describe.json` 在 include 之外。
 - `function_size` 用 engineering-standards 默认上限，不做放宽。
