@@ -1,10 +1,10 @@
 # 需求主文档：Coopanion × Nowledge Mem 插件（coopanion-mem-plugin）
 
 - 需求标识：`coopanion-mem-plugin`
-- 主文档版本：v0.6（实施中：T2 第 0 轮完成，纠正第 2 轮已分配——**本轮为当前授权内最后一轮**）
+- 主文档版本：v0.7（实施中：T1/T2 组级验收通过；**全局纠正额度已归零**；T3 待启动/继续）
 - 项目仓库：`/Users/tomahawkd/Documents/projects/coopanion-nmem`（本仓库，尚无 git）
 - 需求开发目录：`docs/dev/coopanion-mem-plugin/`（用户 2026-10-26 裁定）
-- 最后更新：2026-10-26 15:55 CST，由 orchestrator 维护
+- 最后更新：2026-10-26 16:20 CST，由 orchestrator 维护
 
 ## 1. 用户原始意图
 
@@ -63,15 +63,18 @@
 | 子任务 | 责任组 | 简报 | 目标（行为） | 依赖 | 状态 | 验收依据 |
 | --- | --- | --- | --- | --- | --- | --- |
 | T1 仓库脚手架与工程门禁 | planner「T1」 | `tasks/T1.md` | 可安装可挂载的最小 World 包 + 工程门禁就位 | 无 | **组级验收通过（第 0 轮 + 纠正第 1 轮；基线提交 `496fd20`）**；非阻塞分流：L5→T2、F4/F5→T3、index.ts 覆盖/F2/缺口 5 GUI 目视→T4 | 三命令+coverage 全绿 + sideload 三步 + nmem.started 事件（orchestrator 亲验）；R1 无阻塞接受、R2 无保留接受 |
-| T2 Mem REST 客户端层 | planner「T2」 | `tasks/T2.md` | 类型化、框架无关、可独立单测的 Mem 客户端 | T1 ✅ | **第 0 轮完成；联合准入「需修改后接受」；纠正第 2 轮进行中（C1+X2 落地）**；契约快照已定稿（T2-worklog §8.4，C1 不改公开面） | 行为矩阵 43 用例 + 覆盖 + 门禁（X2 落地后须 0 findings）；缺口 4/7 已关闭；R1 阻塞 F1 待修 |
-| T3 World 工具与提示词策略 | planner「T3」 | `tasks/T3.md` | Coo 能经 nmem_* 工具读写 Mem（含 client↔world 集成） | T1 ✅，与 T2 并行至集成点 | 未启动（可启动） | dry-mount + 工具单测（fake client）+ describe 一致性 |
+| T2 Mem REST 客户端层 | planner「T2」 | `tasks/T2.md` | 类型化、框架无关、可独立单测的 Mem 客户端 | T1 ✅ | **组级验收通过（第 0 轮 + 纠正第 2 轮；提交 `caf7b2a`→`8322e45`）**；契约快照 §8.4 冻结；X4→T3、X5→T4、真实联测→T4 已分流 | 43→51 用例 + 覆盖不劣化 + 门禁 0 findings（X2 收口，三方四次复跑）；R1 撤回全部阻塞、R2 无保留接受（orchestrator 亲验） |
+| T3 World 工具与提示词策略 | planner「T3」 | `tasks/T3.md` | Coo 能经 nmem_* 工具读写 Mem（含 client↔world 集成） | T1 ✅ T2 ✅（seam 冻结，集成段已解锁） | 未启动（可启动） | dry-mount + 工具单测（fake client）+ describe 一致性；含 X4（excerpt 不透传）与 F4/F5 |
 | T4 契约测试与真机验收支撑 | planner「T4」 | `tasks/T4.md` | 端到端链路验证 + 可重复验收材料 | T3（编码可先行于 T2 后） | 未启动 | 契约套件全绿 + 场景 A–D 留证；附 index.ts 入口覆盖、F2（README/files 核对）、缺口 5 GUI 目视（可选） |
 
 依赖顺序：T1 → {T2 ∥ T3（至集成点）} → 集成（T3 内）→ T4。每组由用户独立启动 planner 主会话；组内实施细化由 planner 负责。
 
 ## 7. 阶段状态与全局纠正预算
 
-- 当前阶段：**实施中**（T2 纠正第 2 轮；T3 可与 T2 纠正轮并行启动——契约 seam 已冻结（T2-worklog §8.4），集成段待 T2 闭环；T4 待 T3 完成后启动）。
+- 当前阶段：**实施中**（T1/T2 已关闭；**T3 待启动**（若尚未开）或继续；T4 待 T3 完成后启动）。
+- 纠正预算登记：第 0 轮（初始）、纠正第 1 轮（T1）、纠正第 2 轮（T2）均已关闭；**全局纠正额度已归零（2/2 已用）**。⚠ T3/T4 及最终验收阶段若再需任何修正，须用户明确增加授权，否则 orchestrator 停止纠正派发（问题仍会登记与汇报，但不派发修正）。
+- X2 落地登记（义务③）：声明已于 `5a2c940` 落地（与批准件逐字一致，纯增量）；收口证据 = 真仓库全量审计 0 findings（即时/C1 后/C1b 后/终态四次，三方复跑）；移除条件 = `send` body 语义或 transport 契约出现非出口消费者时复审；fail-closed = `send` 签名/路径变化即惰性失效、finding 回归。详见 T2-worklog §9.1。
+- 冻结约束更新：`package.json` 与 `AGENTS.md` 仍冻结；`.codeharness/code-harness.json` 自本轮起含已批准声明，后续变更同样走全量审计 + architecture 审查。
 - 纠正预算登记：第 0 轮（初始）与纠正第 1 轮（T1）已关闭；**纠正第 2 轮（进行中）= T2 修正包**，范围：①C1（R1-F1）：`retryAfterDelayMs` 双形式解析（delay-seconds / HTTP-date）+ 空/无效回退 1000ms + >10s fail-fast 不重试 + 固定时钟边界用例（范围与测试义务按 T2-worklog §6.7 收敛清单，不扩大）；②X2：落地已批准的 `type.broad.encoding.instance_outputs` 声明（architecture.md §4.1 定稿机制），落地后真仓库 `--all` 全量审计须 **0 findings** 作收口证据，并履行登记/fail-closed 义务。验收口径：R1 定点复核 F1 后撤回阻塞；R2 条件 A/B 均闭环后无保留接受。**⚠ 本轮关闭后全局纠正额度为 0：T3/T4 及最终验收若再需修正，须用户明确增加授权，否则停止纠正派发。**
 - orchestrator 裁定记录（2026-10-26）：X2 批准（依据：设计期 AGENTS 第 2 条/§4.1 预授权路径 + 双探针有效性/最小性 + R2 首评采纳 + R1 三前提代码侧复核；附四条配套义务见 architecture.md §4.1）；O1 登记为**已接受风险**：无 id 的 save 在 429/5xx 重试窗口可能重复写——v1 维持均匀重试矩阵（措辞约束：不得宣称本地无风险或重复落库已实测；远程化（A6/场景 E）成真时升级，若改重放政策须带「首次提交后失败」有状态测试）；X4（错误 excerpt 未脱敏，回执不得原样透传）→ T3 简报；X5（/health 不鉴权，鉴权验证走数据端点）→ T4 简报。
 - 纠正预算登记：初始实施与审查为第 0 轮；**纠正第 1 轮（进行中）= T1 修正包**，范围：C3（删 definition.ts 两行实现注释）、C4/C4′（补覆盖证据 + AGENTS 第 4 条修订）、C1（F1 处置，裁定 B：移除 ConfigGroup 的 enabled 旋钮，interface/defaults 保留）、L1（git init + 基线提交，T2/T3 启动前完成）。验收口径：R1 原会话定点确认后撤回阻塞；R2 条件 C1/C2 落地后无保留接受。**本轮关闭后剩余额度 1**。
@@ -87,6 +90,7 @@
 | T1-IMPL（第 0 轮） | planner「T1」组内（coder/tester/reviewer/architecture 六会话） | 脚手架、门禁、uv sync、缺口 2/3/5、真机 sideload、联合准入 | `tasks/T1-worklog.md` §6 | **已完成，组级未验收**（联合准入收敛「需修改后接受」） |
 | T1-FIX1（纠正第 1 轮） | planner「T1」组内 | C3/C4/C4′/C1-B/L1 + R1/R2 闭环 | `tasks/T1-worklog.md` §9 | **已完成，组级验收通过**（基线 `496fd20`） |
 | T2-IMPL（第 0 轮） | planner「T2」组内（coder×3/tester/R1/R2 六会话） | mem 客户端、43 用例矩阵、L5+守护、缺口 4 实测、缺口 7 关闭、联合准入+交叉核对 | `tasks/T2-worklog.md` §6–§8 | **已完成，组级未验收**（收敛「需修改后接受」；提交 `caf7b2a`→`5d30e8d`） |
+| T2-FIX2（纠正第 2 轮） | planner「T2」组内 | C1/F1/F1b 双形式解析与 fail-fast + X2 声明落地与审计收口 + R1/R2 闭环 | `tasks/T2-worklog.md` §9 | **已完成，组级验收通过**（提交 `e79cb19`/`5a2c940`/`160cd51`/`8322e45`） |
 
 ## 9. 角色会话登记
 
@@ -106,3 +110,4 @@
 - v0.4（2026-10-26）：T1 第 0 轮交付完成并经 orchestrator 亲验（三命令全绿、sideload 证据在位）；登记纠正第 1 轮（C3/C4/C4′/C1-B/L1）；C2 修订包汇入 architecture.md 与 T2/T3 简报；缺口 1/2/3/5 关闭、L2/L3 关闭、L4 归纠正轮；C1/L1 由 orchestrator 裁定（依据双方收敛结论）。
 - v0.5（2026-10-26）：T1 纠正第 1 轮闭环，组级验收通过（R1 无阻塞接受、R2 无保留接受；四命令含 coverage 三方复跑全绿；基线提交 `496fd20`，orchestrator 亲验）；纠正第 1 轮关闭，剩余额度 1；非阻塞分流登记（L5→T2，F4/F5→T3，index.ts/F2/缺口 5 GUI→T4）；T2/T3 开放启动。
 - v0.6（2026-10-26）：T2 第 0 轮完成并亲验（43/43、覆盖、恰 2 条登记 finding、证据在位）；登记纠正第 2 轮（C1 按 §6.7 收敛范围 + X2 落地）；X2 批准（附四条义务，architecture.md §4.1 定稿）；§2f Retry-After 双形式澄清登记；O1 已接受风险登记；X4→T3、X5→T4 分流；**本轮后纠正额度归零，后续修正需用户增授权**；T3 允许与 T2 纠正轮并行（seam 冻结）。
+- v0.7（2026-10-26）：T2 纠正第 2 轮闭环并亲验（声明与批准件一致、51/51、门禁 9 files 0 findings、工作树干净）；T2 组级验收通过（R1 撤回全部阻塞含 F1b、R2 无保留接受延伸至终态）；缺口 4/7 关闭；X2 落地登记（义务③）完成；**全局纠正额度 2/2 已用尽**；T3 集成段解锁。
