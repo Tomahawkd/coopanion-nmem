@@ -249,7 +249,7 @@ typecheck 0｜test 96/96（mem-client 44 + tools 43 + world 9）｜coverage All 
 
 ### 10.5 本轮提交与终态
 
-- 提交：代码+测试（config/tools/world/definition + 两测试 + R1 非阻塞注释修正）一笔；worklog 终稿一笔（哈希随末次提交补记）。
+- 提交：代码+测试（config/tools/world/definition + 两测试 + R1 非阻塞注释修正）一笔；worklog 终稿一笔（代码 `4bee14f`、worklog `f9e55d6`）。
 - **组级验收：D12 轮通过**（R1 接受无阻塞、R2 无保留+终态确认；四命令 coder/planner/R1/R2 四方复跑全绿；真机复验证据在档）。全局纠正额度维持 2/2 已用尽（D12 为新增范围授权）。
 - **T3 终态**：第 0 轮 + D12 轮均闭环；本组停止，T4 可启动。S5 关闭（经 D12 解锁）；S6①→T4（契约事实不变）；遗留仅 S4（codeharness 外部缺陷，短期约束在案）与 T4 既定分流项。
 
