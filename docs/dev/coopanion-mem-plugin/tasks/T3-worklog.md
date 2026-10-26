@@ -44,6 +44,21 @@
 - **组级验收：通过**（组内口径）：联合准入双方接受（R1 无阻塞、R2 无保留），必要验证四命令经 coder/planner/R1/R2 多方独立复跑全绿；阻塞（F1）已修复并定点复核撤阻。第 0 轮内补齐（P2F/F1FIX）均经用户授权登记（T3-D12），未动全局纠正额度。
 - **会话总数（第 0 轮）**：7 会话（coder×3 / tester / reviewer×1+复核 / architecture×1+复核）+ planner 亲核；无在途回合外会话。
 
+### 6.8 S2 真机 smoke 记录（17:05–17:1x，planner 执行，用户授权 T3-D13）
+
+| 步骤 | 结果 | 证据（/tmp/t3-smoke-evidence/） |
+| --- | --- | --- |
+| 前置检查 | link 安装在位、`worlds.nmem.enabled:true`、Mem `/health` ok、基线标记查询 0 命中 | 01-prechecks / 04-mem-baseline |
+| Core 重启 | `POST /api/run/restart` 200（关机 5 步全过），PID 5035→56516；重启前 nmem `tools:[]`（旧进程内存模块）→ 重启后 `tools:["nmem_search","nmem_get","nmem_save"]` | 02-restart / 03-after-restart |
+| 挂载事件 | 新 `nmem.started`（17:05:23，cursor 48，origin internal，文案含三工具）+ Core 日志「World 已启动: nmem」 | 03-after-restart |
+| nmem_search（Coo 实调） | **通**：17:05:25 Coo 自主调用（query="Tomahawkd 用户偏好"）→ 回执「没有找到相关记忆。」（当时库中确无相关内容）；用户另证「搜索通了」 | session-main.jsonl（04-mem-baseline 同拍） |
+| nmem_save（Coo 实调） | **422（S5）**：四连败（17:05:27–17:07:10，参数组合各异）；回执均为固定文案（X4 生效，服务端错误体未外泄；进程无崩溃无挂起）；根因见 §7 S5；用户裁定只登记不修（T3-D14） | probe-I.mts + 05-08 系列 |
+| nmem_get（Coo 实调） | 未触发（无真实写入可供回读；不虚构证据，归 T4 场景 A） | — |
+| 诊断清理 | 探针记忆 DELETE 全 200，残余检索为空；Coo 写入均失败无残留；顺带实证 §7 缺口 6（DELETE 存在） | 08-cleanup |
+| 观察项 | Coo 失败后行为符合 ENV_PROMPT 策略：告知用户、不重试轰炸、改用自身文件记录并如实标注 nmem_save 不可用 | session-main.jsonl（17:05 journal） |
+
+**smoke 结论（部分通过，如实登记）**：挂载/声明/search 实调验证通过；save 失败已根因定位并按用户裁定登记不修；get 未实调。整条写路径在当前中文 displayName 下不可用（T3-D14），ASCII displayName 下经探针实证可用。
+
 ### 6.6 F1FIX 结果摘要（coder 回执 + planner 亲核）
 
 - **实现**：searchHandler 现读 cfg 后 `const limit = Math.min(input.value.limit ?? cfg.searchLimit, LIMIT_MAX)`，同一值用于请求 options 与回执截断（C2 语义不变）；`formatSearch(hits, limit)` 单循环三分支（null→skipped 全量计数、前 limit 条可用→列出、超出→omitted）；尾注序「另有 N 条结果未列出」→「另有 N 条结果因数据缺失被略过」可并存；首行 N=实际列出条数。**coder 增补（planner 接受）**：配置越界防御 clamp（cfg.searchLimit 经手改起出 schema 范围时钳到 10——请求侧不再发出进反工具契约的 limit，与简报「上限 10 条」一致）。
@@ -108,6 +123,7 @@
 | T3-D11 | P2 变异存活 M7（envPromptVars 禁 I/O 无守护）与 O2（search 回执标题不截断）对应简报失败示例清单两项，连同 O5 边界值用例，按**第 0 轮完成度补齐**（T3-P2F）处理——非纠正轮、不动全局额度；O3/O4/O6 仅登记不修 | 简报「成功与失败示例」；工程标准边界用例义务；T2-P2F 先例 |
 | T3-D12 | **F1 处置（用户 2026-10-26 授权）**：R1 阻塞 F1 按第 0 轮完成度补齐立即修（与 T3-D11 同类：F1 对应简报失败示例「回执无界…上限 10 条」明文项），修后 R1 原会话定点复核撤阻、R2 终态 delta 确认，然后统一提交；不动全局纠正额度登记 | 用户裁定；R2「失败示例清单即第 0 轮范围定义」意见 |
 | T3-D13 | **S2 真机 smoke（用户 2026-10-26 授权）**：本轮执行——重启 Coopanion Core 使 link 安装的 T3 代码生效，Coo 实调三工具，取事件流/运行日志/Mem 侧证据；场景化验收 A–D 仍归 T4 | 用户裁定；T3-D5 解除 |
+| T3-D14 | **S5 处置（用户 2026-10-26 裁定）：只登记不修**。事实记录（探针实证，非推测）：ASCII botName（如 "Coo"）下 agent_id 透传可用（200）；中文 displayName（如 "大肥鱼"，live 现状）下 nmem_save 持续 422——服务端把 agent_id 当受约束 profile id。代码不改，写路径在当前 displayName 下不可用；后续修复/displayName 调整由用户另行决定，契约事实已分流 S6→T4 | 用户裁定 |
 
 ## 6. 会话登记与验收记录
 
@@ -164,6 +180,8 @@
 | S2 | 集成后真机 smoke（重启 Core + Coo 实调三工具） | 待用户裁定是否本轮执行（T3-D5）；场景化验收归 T4 | 用户 |
 | S3 | index.ts 入口覆盖 0%、README/files 核对（F2）、X5 鉴权验证、GUI 目视 | T1/T2 既定分流 | T4 |
 | S4 | **`../codeharness` 门禁缺陷（P1 发现，非本仓库代码）**：测试对导入 const 直接取成员调用时，`aliases._binding` 跨文件误绑 + `SemanticIndex.text` 按当前文件字节按对方偏移切片 → 切在多字节字符中间即 `UnicodeDecodeError`（exit 2）。合成工程稳定复现，CJK 内容必现、ASCII 不现（证据 `/tmp/t3-p1-evidence/05-gate-crash-minimal.txt`/`05b`）；本仓库现状 0 findings 未受影响。短期约束（T4 起生效）：测试勿对导入 const 直接取成员调用。按 D5「不改 codeharness 本身」不修，转用户/orchestrator 裁定是否另立修复 | 登记 | 用户/orchestrator |
+| S5 | **S2 smoke 发现（17:0x）：真实 Mem 对 `agent_id` 按受约束 agent profile id 校验**（须小写字母/数字起始，仅 `_.:-` 与字母数字；证据：`agent_id:"大肥鱼"`→422 `Agent profile id must start with a lowercase letter or digit…`，`"Coo"`→200），而 live `ctx.botName = cfg.displayName = "大肥鱼"`（cortico world.ts:492）→ 全部 nmem_save 422；search 不带此字段故正常。逐字节同构探针定位（`/tmp/t3-smoke-evidence/probe-I.mts`）；X4 固定文案拦截了服务端错误体不外泄（同时向我们隐藏了诊断信息，行为符合设计）。诊断探针已全部 DELETE 清理（200×5，顺带实证 §7 缺口 6：DELETE 端点存在）；Coo 的写入均失败，无额外残留。**用户裁定（T3-D14）：只登记不修**——写路径在中文 displayName 下保持 422；ASCII displayName 下探针实证可用；后续修复/displayName 调整由用户另行决定 | **已登记（不修）** | 用户/T4 |
+| S6 | （随 S5 登记，转 T4 契约事实）① agent_id 字符集规则入契约测试（X7 真实写入验证的一部分）；② `DELETE /memories/{id}` 存在性已实证（200），契约测试可选清理可解除「不依赖删除」限制；③ architecture.md §1.4 溯源措辞修正清单追加 agent_id 约束（随 R2 已登记的 source 措辞项一并交 orchestrator） | 登记 | T4/orchestrator |
 
 ## 8. 交接材料（第 0 轮终态：联合准入已收齐，R1 阻塞 F1 待授权处置）
 
@@ -188,4 +206,12 @@ typecheck 0｜test 96/96（mem-client 44 + tools 43 + world 9）｜coverage All 
 
 ### 8.4 给 T4 的交接口径
 
-完整可安装插件（含 ENV_PROMPT 与三工具）待 F1 处置后提交；真机场景 A–D/E、index.ts 入口覆盖、F2（README/files）、X5（鉴权走数据端点）、O6（装配层工具名冲突）、S4 短期约束（测试勿对导入 const 直接取成员调用）均归 T4。
+完整可安装插件（含 ENV_PROMPT 与三工具）已提交（`0bdbb1b`）；真机场景 A–D/E、index.ts 入口覆盖、F2（README/files）、X5（鉴权走数据端点）、O6（装配层工具名冲突）、S4 短期约束（测试勿对导入 const 直接取成员调用）均归 T4。**随 S5/S6 新增**：① agent_id 字符集规则入契约测试（含中文 displayName → 422 的真实样本）；② DELETE 端点已实证存在，契约测试可选清理可解除「不依赖删除」限制；③ architecture.md 文档修正清单（source 措辞 + agent_id 约束）交 orchestrator；④ smoke 已证：挂载/search 通、save 在中文 displayName 下 422（S5，用户裁定不修）——T4 场景 B（写沉淀）需先等 S5 处置落地或 displayName 调整，否则必然受阻。
+
+### 8.5 提交记录（第 0 轮终态）
+
+- `0bdbb1b`：T3 实现（三工具 + world 接线 + ENV_PROMPT + describe 同步 + 两套测试；含 P1/P2F/F1FIX 三包）
+- `36e622c`：worklog 闭环（联合准入通过）
+- （本次）worklog 终稿：smoke 记录 + S5/S6 登记 + T3-D14 裁定
+
+**本组状态标记（第 0 轮终态，2026-10-26 17:2x）：实施已结束，待主文档汇入。组级验收通过（R1 无阻塞接受/F2 无保留接受，均延伸至终态）；S2 smoke 部分通过（挂载/search 通，save 根因 S5 已登记不修，get 未实调）；全局纠正额度维持 0/2（第 0 轮内补齐 P2F/F1FIX 均经用户授权登记）；在途会话/operation 无。**
