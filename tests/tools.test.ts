@@ -78,7 +78,7 @@ interface Harness {
 function setup(): Harness {
   const client = new FakeToolClient();
   const cfg: NmemConfigSection = { ...NMEM_DEFAULTS };
-  return { tools: nmemTools({ client, cfg, botName: 'Coo' }), client, cfg };
+  return { tools: nmemTools({ client, cfg }), client, cfg };
 }
 
 function toolNamed(tools: ToolDef[], name: string): ToolDef {
@@ -485,7 +485,7 @@ describe('nmem_save 可选字段', () => {
       content: '决定:门店周末延长营业',
       source: 'coopanion',
       source_app: 'cortico-world-nmem',
-      agent_id: 'Coo',
+      agent_id: 'coopanion',
       labels: ['coopanion'],
     });
   });
@@ -519,10 +519,39 @@ describe('nmem_save 可选字段', () => {
       importance: 0.5,
       source: 'coopanion',
       source_app: 'cortico-world-nmem',
-      agent_id: 'Coo',
+      agent_id: 'coopanion',
     });
   });
+});
 
+describe('nmem_save agentId 溯源旋钮', () => {
+  it('cfg.agentId 覆盖时 payload 透传新值', async () => {
+    const { tools, client, cfg } = setup();
+    cfg.agentId = 'coo-pet';
+    await call(tools, 'nmem_save', { content: '覆盖正文' });
+    expect(client.saveCalls[0]?.agent_id).toBe('coo-pet');
+  });
+
+  it('直改 cfg.agentId 引用后下一次调用现读新值', async () => {
+    const { tools, client, cfg } = setup();
+    await call(tools, 'nmem_save', { content: '热改前' });
+    cfg.agentId = 'coo-pet';
+    await call(tools, 'nmem_save', { content: '热改后' });
+    expect(client.saveCalls.map((entry) => entry.agent_id)).toEqual(['coopanion', 'coo-pet']);
+  });
+
+  it('非法 agentId 不在工具层拦截,服务端 422 走固定文案且不泄露响应摘要', async () => {
+    const { tools, client, cfg } = setup();
+    cfg.agentId = '大肥鱼';
+    client.failure = new MemHttpError(422, MARKER);
+    const outcome = await call(tools, 'nmem_save', { content: '非法溯源' });
+    expect(client.saveCalls[0]?.agent_id).toBe('大肥鱼');
+    expect(outcome).toEqual({
+      text: 'Nowledge Mem 请求失败(状态码 422):请稍后再试或检查参数。',
+      failed: true,
+    });
+    expect(outcome.text).not.toContain(MARKER);
+  });
 });
 
 describe('nmem_save 省略字段', () => {

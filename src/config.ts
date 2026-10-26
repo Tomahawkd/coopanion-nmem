@@ -1,4 +1,4 @@
-import type { ConfigGroup } from 'cortico/core/types.ts';
+import type { ConfigGroup, ConfigProperty } from 'cortico/core/types.ts';
 
 /** config.json 的 worlds.nmem 段,默认禁用;bot 或部署可启用。 */
 export interface NmemConfigSection {
@@ -9,6 +9,11 @@ export interface NmemConfigSection {
   searchLimit: number;
   /** `nmem_search` 的缺省检索模式;热改。 */
   searchMode: 'fast' | 'deep';
+  /**
+   * 写入 Mem 的 `agent_id` 溯源标识;热改。须满足 Mem 对 agent profile id 的约束:
+   * 小写字母或数字起始,仅含小写字母、数字与 `_.:-`(中文会被 Mem 拒绝)。
+   */
+  agentId: string;
 }
 
 /** 部署 `.env` 里的 Mem API key 名;本机 Mem 免 key。 */
@@ -19,10 +24,28 @@ export const NMEM_DEFAULTS: NmemConfigSection = {
   baseUrl: 'http://127.0.0.1:14242',
   searchLimit: 5,
   searchMode: 'fast',
+  agentId: 'coopanion',
 };
 
-/** World 配置的 JSON Schema 声明。全部路径落在 `worlds.nmem.` 段内。 */
-export const NMEM_CONFIG_GROUP: ConfigGroup = {
+/**
+ * 配置项声明:`pattern` 是 JSON Schema 的字符串约束关键字(声明面携带;当前框架表单与
+ * Core 均不执行该校验,非法值由 Mem 服务端拒绝),
+ * 当前框架的 `ConfigProperty` 尚未声明它,故本地补齐后按结构兼容交给 `ConfigGroup`。
+ */
+interface NmemConfigProperty extends ConfigProperty {
+  pattern?: string;
+}
+
+interface NmemConfigGroup extends ConfigGroup {
+  schema: {
+    type: 'object';
+    title: string;
+    description?: string;
+    properties: Record<string, NmemConfigProperty>;
+  };
+}
+
+const NMEM_CONFIG_DECL: NmemConfigGroup = {
   id: 'world:nmem',
   owner: 'world:nmem',
   schema: {
@@ -51,6 +74,17 @@ export const NMEM_CONFIG_GROUP: ConfigGroup = {
         enum: ['fast', 'deep'],
         'x-hot': true,
       },
+      'worlds.nmem.agentId': {
+        type: 'string',
+        title: 'agent_id 溯源标识',
+        description:
+          '写入 Nowledge Mem 的 agent_id。须以小写字母或数字开头,仅含小写字母、数字与 _ . : -（中文如 displayName 会被 Mem 拒绝 422）。',
+        pattern: '^[a-z0-9][a-z0-9_.:-]*$',
+        'x-hot': true,
+      },
     },
   },
 };
+
+/** World 配置的 JSON Schema 声明。全部路径落在 `worlds.nmem.` 段内。 */
+export const NMEM_CONFIG_GROUP: ConfigGroup = NMEM_CONFIG_DECL;

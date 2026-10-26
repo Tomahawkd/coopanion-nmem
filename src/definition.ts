@@ -12,7 +12,6 @@ export const NMEM: WorldDefinition<NmemConfigSection> = {
     new NmemWorld({
       cfg: ctx.cfg,
       timezone: ctx.timezone,
-      botName: ctx.botName,
       client: new MemClient({ baseUrl: ctx.cfg.baseUrl, apiKey: ctx.secret(NMEM_API_KEY) }),
     }),
   describe: {

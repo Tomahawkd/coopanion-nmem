@@ -75,7 +75,6 @@ function worldWithFakeClient(client: NmemToolClient): {
   const world = new NmemWorld({
     cfg: ctx.cfg,
     timezone: ctx.timezone,
-    botName: ctx.botName,
     client,
   });
   return { world, ctx };
@@ -119,11 +118,12 @@ describe('Nowledge Mem World 工具与配置', () => {
     expect(world.envPromptVars()).toEqual({});
   });
 
-  it('ConfigGroup 只声明三个自有旋钮,enabled 归 World 总览开关', () => {
+  it('ConfigGroup 只声明四个自有旋钮,enabled 归 World 总览开关', () => {
     expect(Object.keys(NMEM_CONFIG_GROUP.schema.properties)).toEqual([
       'worlds.nmem.baseUrl',
       'worlds.nmem.searchLimit',
       'worlds.nmem.searchMode',
+      'worlds.nmem.agentId',
     ]);
     expect(NMEM_CONFIG_GROUP.schema.properties).not.toHaveProperty('worlds.nmem.enabled');
   });
@@ -174,6 +174,17 @@ describe('Nowledge Mem World 接线', () => {
     ctx.persist({ searchLimit: 8, searchMode: 'deep' });
     await search.handler({ query: '猫' }, CALL);
     expect(client.searchCalls[1]?.options).toEqual({ limit: 8, mode: 'deep' });
+  });
+
+  it('cfg 热改 agentId 后 nmem_save 用新值溯源', async () => {
+    const client = new RecordingClient();
+    const { world, ctx } = worldWithFakeClient(client);
+    const save = toolNamed(world.tools(), 'nmem_save');
+    expect(await save.handler({ content: '缺省溯源' }, CALL)).toEqual({ text: '已新建记忆 mem-fake。' });
+    expect(client.saveCalls[0]?.agent_id).toBe('coopanion');
+    ctx.persist({ agentId: 'coo-pet' });
+    await save.handler({ content: '热改后溯源' }, CALL);
+    expect(client.saveCalls[1]?.agent_id).toBe('coo-pet');
   });
 });
 

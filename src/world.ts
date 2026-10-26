@@ -7,11 +7,9 @@ import { nmemTools, type NmemToolClient } from './tools.ts';
 const ENV_PROMPT_FILE = fileURLToPath(new URL('./ENV_PROMPT.md', import.meta.url));
 
 export interface NmemWorldOptions {
-  /** `worlds.nmem` 的活引用:工具每次调用现读缺省条数与检索模式。 */
+  /** `worlds.nmem` 的活引用:工具每次调用现读缺省条数、检索模式与 `agent_id`。 */
   cfg: NmemConfigSection;
   timezone: string;
-  /** 写进记忆溯源 `agent_id` 的身份。 */
-  botName: string;
   /** Mem 客户端;组合根注入真实 `MemClient`,测试注入手写 fake。 */
   client: NmemToolClient;
 }
@@ -28,7 +26,7 @@ export class NmemWorld implements World {
   }
 
   tools(): ToolDef[] {
-    return nmemTools({ client: this.opts.client, cfg: this.opts.cfg, botName: this.opts.botName });
+    return nmemTools({ client: this.opts.client, cfg: this.opts.cfg });
   }
 
   webUi(): WorldWebUiDecl {

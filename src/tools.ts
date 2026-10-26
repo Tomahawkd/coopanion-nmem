@@ -64,13 +64,11 @@ export interface NmemToolClient {
   saveMemory(payload: MemorySavePayload): Promise<MemorySaveResult>;
 }
 
-/** 装配工具所需的三项依赖。 */
+/** 装配工具所需的两项依赖。 */
 export interface NmemToolDeps {
   client: NmemToolClient;
-  /** `worlds.nmem` 的活引用:每次调用现读缺省条数与检索模式。 */
+  /** `worlds.nmem` 的活引用:每次调用现读缺省条数、检索模式与 `agent_id`。 */
   cfg: NmemConfigSection;
-  /** 写进 `agent_id` 的溯源身份。 */
-  botName: string;
 }
 
 /** 参数校验的一次性收窄结果:通过时带具体输入,失败时带可直接返回的回执。 */
@@ -176,11 +174,11 @@ export const NMEM_TOOL_DECLS: ReadonlyArray<Omit<ToolDef, 'handler'>> = [
 ];
 
 /** 按依赖装配三个记忆工具的 handler;每次调用现读 `cfg`。 */
-export function nmemTools({ client, cfg, botName }: NmemToolDeps): ToolDef[] {
+export function nmemTools({ client, cfg }: NmemToolDeps): ToolDef[] {
   return [
     { ...NMEM_TOOL_DECLS[0], handler: searchHandler(client, cfg) },
     { ...NMEM_TOOL_DECLS[1], handler: getHandler(client) },
-    { ...NMEM_TOOL_DECLS[2], handler: saveHandler(client, botName) },
+    { ...NMEM_TOOL_DECLS[2], handler: saveHandler(client, cfg) },
   ];
 }
 
@@ -227,7 +225,7 @@ function getHandler(client: NmemToolClient): ToolDef['handler'] {
   };
 }
 
-function saveHandler(client: NmemToolClient, botName: string): ToolDef['handler'] {
+function saveHandler(client: NmemToolClient, cfg: NmemConfigSection): ToolDef['handler'] {
   return async (args) => {
     const input = validateSave(args);
     if (!input.ok) return input.outcome;
@@ -240,7 +238,7 @@ function saveHandler(client: NmemToolClient, botName: string): ToolDef['handler'
       importance: input.value.importance,
       source: SOURCE,
       source_app: SOURCE_APP,
-      agent_id: botName,
+      agent_id: cfg.agentId,
     };
     return attemptOutcome(async () => formatSave(await client.saveMemory(payload)));
   };
