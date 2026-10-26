@@ -124,6 +124,8 @@
 | T3-D12 | **F1 处置（用户 2026-10-26 授权）**：R1 阻塞 F1 按第 0 轮完成度补齐立即修（与 T3-D11 同类：F1 对应简报失败示例「回执无界…上限 10 条」明文项），修后 R1 原会话定点复核撤阻、R2 终态 delta 确认，然后统一提交；不动全局纠正额度登记 | 用户裁定；R2「失败示例清单即第 0 轮范围定义」意见 |
 | T3-D13 | **S2 真机 smoke（用户 2026-10-26 授权）**：本轮执行——重启 Coopanion Core 使 link 安装的 T3 代码生效，Coo 实调三工具，取事件流/运行日志/Mem 侧证据；场景化验收 A–D 仍归 T4 | 用户裁定；T3-D5 解除 |
 | T3-D14 | **S5 处置（用户 2026-10-26 裁定）：只登记不修**。事实记录（探针实证，非推测）：ASCII botName（如 "Coo"）下 agent_id 透传可用（200）；中文 displayName（如 "大肥鱼"，live 现状）下 nmem_save 持续 422——服务端把 agent_id 当受约束 profile id。代码不改，写路径在当前 displayName 下不可用；后续修复/displayName 调整由用户另行决定，契约事实已分流 S6→T4 | 用户裁定 |
+| T3-D15 | **D12 轮裁定①（pattern 类型缺口）**：cortico 0.2.7 的 `ConfigProperty` 未声明 JSON Schema `pattern` 关键字——采纳 coder 结构化子类型方案（`NmemConfigProperty extends ConfigProperty {pattern?}` + 结构兼容导出 `ConfigGroup`）：pattern 逐字进声明面（WebUI/声明层可见），无 cast/any/压制；Core `coerceGroupValues` 不执行 pattern（仅 enum/数值），与本轮「非法值不由工具层/框架拦截、Mem 服务端权威拒绝 422 + X4 固定文案兑底」语义一致。pattern 在设置页 GUI 的实际呈现未验（并入缺口 5 GUI 目视→T4 可选）；框架侧补类型归上游，不在本仓范围 | coder 回执 + planner 亲核；D12 范围原文「schema pattern 按 S5 实证约束」 |
+| T3-D16 | **D12 轮裁定②**：门禁对 `Omit<ConfigGroup,…>`+索引访问形态崩溃（S4 同类，`/tmp/t3-d12-evidence/07b`）——避开该形态实现，结论登记供后续同类需求复用；不改 codeharness | S4 纪律延续 |
 
 ## 6. 会话登记与验收记录
 
@@ -215,3 +217,54 @@ typecheck 0｜test 96/96（mem-client 44 + tools 43 + world 9）｜coverage All 
 - （本次）worklog 终稿：smoke 记录 + S5/S6 登记 + T3-D14 裁定
 
 **本组状态标记（第 0 轮终态，2026-10-26 17:2x）：实施已结束，待主文档汇入。组级验收通过（R1 无阻塞接受/F2 无保留接受，均延伸至终态）；S2 smoke 部分通过（挂载/search 通，save 根因 S5 已登记不修，get 未实调）；全局纠正额度维持 0/2（第 0 轮内补齐 P2F/F1FIX 均经用户授权登记）；在途会话/operation 无。**
+
+## 10. 新增范围轮（D12：agentId 旋钮，2026-10-26 用户授权，非纠正轮）
+
+前置核验：主文档 v0.8 §2 D12/§7、architecture.md §2e agentId 行与 §1.4 溯源实现口径、T3.md 新增范围条目均已 orchestrator 汇入（`a5e1de6`），与本轮指派逐字一致；基线 `46bc3c4` 工作树干净、101/101 绿（planner 亲跑）。范围严格七点不扩大：①config 旋钮（缺省 `'coopanion'`、x-hot、pattern `^[a-z0-9][a-z0-9_.:-]*$`）②工具层 agent_id 现读旋钮、不再用 ctx.botName（其余溯源不变）③旋钮集合守护测试至恰四旋钮④四类新用例⑤ENV_PROMPT/describe 面不变+四命令⑥R1/R2 增量准入+真机复验⑦worklog+分次提交。
+
+| # | 任务 | 角色/会话 | 状态 |
+| --- | --- | --- | --- |
+| D12-P1 | 实施① – ⑤（coder 单会话） | coder | **完成**（17:34 回执；session `f1c8a0a9…`；见 §10.2；证据 `/tmp/t3-d12-evidence/`；planner 亲核） |
+| D12-P2 | planner 亲核 + 四命令 | planner | **完成**（typecheck 0 / 105/105 / 覆盖 98.55/99.31/96.82 不劣化、四文件 100% / 0 findings；裁定 T3-D15/D16） |
+| D12-P3 | R1/R2 增量联合准入（原会话，聚焦增量） | reviewer、architecture | **完成**（17:46：R1 接受无新增阻塞；R2 增量接受无保留+终态确认；见 §10.3） |
+| D12-P4 | 真机复验：API 重启 Core → Coo 实调（或探针）agent_id='coopanion' 成功写入且 Mem 端可查 | planner | **完成**（17:5x；见 §10.4；证据 09–11） |
+| D12-P5 | 组级验收更新 + worklog 终稿 + 逻辑分次提交 | planner | **完成**（见 §10.5） |
+
+### 10.3 R1/R2 增量准入结论（17:46）
+
+- **R1（reviewer）**：接受本轮增量，无新增阻塞——增量调用链（现读 cfg、botName 零残留、非法值进 client+固定 422 兕底）核查通过；T3-D15 接受（无类型绕过、运行时 pattern 保留）。四命令亲跑绿（105/105、四文件 100%、门禁 0 findings）。**唯一非阻塞**：config.ts:31 JSDoc「WebUI 据此限制输入」表述不实（表单与 Core 均不消费 pattern）→ **planner 已于本轮内修正**（改为「声明面携带;当前框架表单与 Core 均不执行该校验,非法值由 Mem 服务端拒绝」），修正后 typecheck/test/门禁复跑绿（属本轮交付内注释准确性修正，非纠正轮）。报告 `/tmp/t3-r1-review/d12-verify/`。
+- **R2（architecture）**：增量接受（无保留）+ D12 终态确认——①旋钮契约与 §2e 逐字一致；②botName 全链移除后分层/依赖方向不变、对框架身份耦合减少；③T3-D15 两项前提亲证（框架 `ConfigProperty` 无 pattern、`coerceGroupValues` string 分支仅查 enum），「服务端 422 权威拒绝+X4 兕底」是正确的不变量归属（agent profile id 字符集为 Mem 所有，不做本地双重真相）；④T3-D16 避开形态确认。四命令终态亲跑绿。**非阻塞登记**：D15 移除条件=上游补声明 pattern 后回落框架类型（已入 §10.2 注）；§2e「仅字母数字」措辞较 regex 略松（主文档再版对齐，无代码动作）；pattern GUI 呈现未验→T4 可选。证据 `/tmp/t3-r2-arch/d12-delta/`。
+
+### 10.4 真机复验（planner，17:5x）
+
+| 步骤 | 结果 | 证据 |
+| --- | --- | --- |
+| Core 重启 | `POST /api/run/restart` 200，PID 67286；nmem active + 三工具（组合根去 botName 后挂载正常） | 09 |
+| 运行配置面 | `/api/config` 恰四旋钮；`agentId` prop 含 pattern 与 `x-hot:true`，运行值缺省 | 09 |
+| 组合根全链路写入 | `NMEM.create(fakeWorldContext)` → `world.tools()` → `nmem_save` handler → **真实 MemClient** → 真实 Mem：回执「已新建记忆 43c71b30…」 | 10 |
+| Mem 端可查 | `GET /memories/{id}`：`source:'coopanion'`、`metadata.agent_id:'coopanion'`、`metadata.source_app:'cortico-world-nmem'`；search 可命中 | 11 |
+| 清理 | 探针 DELETE 200，无残留；临时探针文件已删，工作树仅本轮交付 | 11 |
+
+**结论：S5 写路径经 D12 解锁（缺省 agent_id='coopanion' 实证可写可查）；中文 displayName 场景由旋钮隔离，live Core 组合根与四旋钮配置面均已生效。**
+
+### 10.5 本轮提交与终态
+
+- 提交：代码+测试（config/tools/world/definition + 两测试 + R1 非阻塞注释修正）一笔；worklog 终稿一笔（哈希随末次提交补记）。
+- **组级验收：D12 轮通过**（R1 接受无阻塞、R2 无保留+终态确认；四命令 coder/planner/R1/R2 四方复跑全绿；真机复验证据在档）。全局纠正额度维持 2/2 已用尽（D12 为新增范围授权）。
+- **T3 终态**：第 0 轮 + D12 轮均闭环；本组停止，T4 可启动。S5 关闭（经 D12 解锁）；S6①→T4（契约事实不变）；遗留仅 S4（codeharness 外部缺陷，短期约束在案）与 T4 既定分流项。
+
+### 10.2 D12-P1 结果摘要（coder 回执 + planner 亲核）
+
+- **实现**：恰四文件+两测试。config：`agentId`（缺省 `'coopanion'`、JSDoc 含 Mem 约束）+ 第四旋钮（pattern `^[a-z0-9][a-z0-9_.:-]*$` 逐字、x-hot）；**pattern 类型缺口**：框架 `ConfigProperty` 未声明该关键字 → 结构化子类型方案（T3-D15）；tools：`saveHandler(client,cfg)` 现读 `cfg.agentId`、`botName` 全链移除（全仓 0 残留）；world/definition 同步。不变面零改动（describe 一致性自然绿）。
+- **测试**（+4，101→105）：守护恰四键；world 热改（persist agentId→'coo-pet'，缺省 'coopanion' 断言含）；tools 覆盖透传/直改引用现读/非法值（`'大肥鱼'` **送达 client** + fake 422 → X4 固定文案无 marker，即服务端权威拒绝口径）；两处旧 `agent_id:'Coo'` 断言改 `'coopanion'`。
+- **四命令（planner 复跑一致）**：typecheck 0｜test **105/105**｜coverage All **98.55/99.31/96.82**（基线 98.52/99.28 不劣化；四文件 100%）｜harness **11 files, 0 findings**。
+- **自验变异**：构造期快照 agentId → 4 例红（tools 3 + world 1）；复原后 diff 一致。
+- **附带发现（T3-D16）**：门禁对 `Omit<ConfigGroup,…>`+索引访问形态崩溃（S4 同类，07b），已避开。
+
+### 10.1 对执行角色的关键输入
+
+- `config.ts`：interface 增 `agentId: string`（JSDoc：写入 Mem 的 agent_id 溯源标识，须满足 Mem 约束小写字母/数字起始仅 `_.:-` 等，热改）；`NMEM_DEFAULTS.agentId = 'coopanion'`；ConfigGroup 增 `worlds.nmem.agentId`（type string、title、description、**pattern `^[a-z0-9][a-z0-9_.:-]*$`**、`'x-hot': true`）。
+- `tools.ts`：`NmemToolDeps` 去掉 `botName`；`saveHandler` 改与 searchHandler 同构取 `(client, cfg)`，`agent_id: cfg.agentId` **每次调用现读**（C2 口径）；其余溯源/校验/回执一字不动。
+- `world.ts`：`NmemWorldOptions` 去 `botName`，`tools()` 不再传；`definition.ts` `create(ctx)` 不再传。
+- 测试：①守护测试恰四键（baseUrl/searchLimit/searchMode/**agentId**）；②溯源用例 `agent_id:'coopanion'`（既有两处 `'Coo'` 断言随改）；③覆盖：`cfg.agentId='coo-pet'` → payload 透传；④非法：`cfg.agentId='大肥鱼'` + fake 抛 `MemHttpError(422, marker)` → X4 固定文案且无 marker（对齐 S5 实证，非法值不在工具层拦截、由服务端权威拒绝）；⑤热改：`ctx.persist({agentId})` 或引用直改后现读新值（world 与 tools 各一处）。
+- 不变面：ENV_PROMPT、describe.json、工具 schema、X4 文案、冻结文件；`src/mem/*` 只读。
