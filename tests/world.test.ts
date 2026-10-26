@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { dryMountWorld, fakeWorldContext } from 'cortico/extensions/dry-mount.ts';
 import { NMEM } from '../src/definition.ts';
-import { NMEM_DEFAULTS } from '../src/config.ts';
+import { NMEM_CONFIG_GROUP, NMEM_DEFAULTS } from '../src/config.ts';
 import describeFile from '../describe.json';
 import { FakeHost } from './helpers/fake-host.ts';
 
@@ -42,6 +42,15 @@ describe('Nowledge Mem World', () => {
     const world = NMEM.create(fakeWorldContext(NMEM, { scratchDir }));
     expect(world.tools()).toEqual([]);
     expect(world.envPromptVars()).toEqual({});
+  });
+
+  it('ConfigGroup 只声明三个自有旋钮,enabled 归 World 总览开关', () => {
+    expect(Object.keys(NMEM_CONFIG_GROUP.schema.properties)).toEqual([
+      'worlds.nmem.baseUrl',
+      'worlds.nmem.searchLimit',
+      'worlds.nmem.searchMode',
+    ]);
+    expect(NMEM_CONFIG_GROUP.schema.properties).not.toHaveProperty('worlds.nmem.enabled');
   });
 
   it('describe.json 与定义中的工具、事件及 ENV_PROMPT 内容一致', () => {

@@ -6,10 +6,10 @@ export default defineConfig({
     env: { CORTICO_LANGUAGE: 'zh' },
     testTimeout: 20000,
     pool: 'forks',
-  },
-  coverage: {
-    provider: 'v8',
-    reporter: ['text', 'json', 'html'],
-    include: ['src/**'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      include: ['src/**'],
+    },
   },
 });
