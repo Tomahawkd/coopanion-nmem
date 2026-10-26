@@ -1,10 +1,10 @@
 # 需求主文档：Coopanion × Nowledge Mem 插件（coopanion-mem-plugin）
 
 - 需求标识：`coopanion-mem-plugin`
-- 主文档版本：v0.10（**实施阶段全部完成**：T1–T4 均组级验收通过；待用户启动整体验收）
+- 主文档版本：v0.11（**整体验收完成：三方意见收齐；业务功能闭环已验证；正式准入差 B1/C1 两项文档层收口，待用户裁定**）
 - 项目仓库：`/Users/tomahawkd/Documents/projects/coopanion-nmem`（本仓库，尚无 git）
 - 需求开发目录：`docs/dev/coopanion-mem-plugin/`（用户 2026-10-26 裁定）
-- 最后更新：2026-10-26 19:40 CST，由 orchestrator 维护
+- 最后更新：2026-10-26 20:10 CST，由 orchestrator 维护
 
 ## 1. 用户原始意图
 
@@ -72,7 +72,11 @@
 
 ## 7. 阶段状态与全局纠正预算
 
-- 当前阶段：**整体验收（进行中）**。评审基准冻结在 `511f879`；三个独立验收会话已派发（ACCEPT-TESTER `398bcdd5` / ACCEPT-REVIEWER `759d6f4d` / ACCEPT-ARCH `d3f6590b`），交付至 docs/dev/coopanion-mem-plugin/acceptance/。评审期间影响评审对象的变更暂停。
+- 当前阶段：**整体验收意见已收齐，待用户裁定收尾方式**。
+- **三方独立结论**（评审基准 `511f879`，交付于 acceptance/）：①ACCEPT-TESTER：业务闭环成立——八项清单 6 通过/1 观察（D10）/1 未验证（远程、GUI）；自采真机证据（含 toolcalls.jsonl 现场失败布尔、真实 .env→401 回路、探针零残留）。②ACCEPT-REVIEWER：**不予准入（需修改）**——B1（README 安全承诺不实：Node fetch 默认跟随 307 重定向，save 正文可被转发至其他 origin；两方独立探针互证，鉴权头未跨 origin 转发；属交付文档缺陷非功能缺陷）；C1（`ctx.secret()` 实现优先读进程环境变量，与「秘密仅经部署 .env」规约/README 冲突，需负责人裁定）；非阻塞 N1（README 清理文案过满）/N2（契约测试可空转）/N3（文档收口，已由 orchestrator 汇入 architecture.md）。③ACCEPT-ARCH：**接受（无阻塞）**——方案符合性/门禁一致/D1–D12 全落实/seam 冻结有效/限制登记如实；F1（S4 约束措辞精度）、V1–V3（既定未验边界）；措辞收口清单 W1–W10 **已由 orchestrator 汇入**。
+- **orchestrator 处置意见**（B1/C1 裁定，依冲突处理序）：B1 事实无争议，处置二选一——(a) 修 README 披露重定向行为并登记已知行为（推荐：风险边际低——仅当 Mem 服务端自身返回 307 时才触发，且鉴权头不跨 origin 转发；探针未证明真实泄露）；(b) 改 client 限制重定向（代码级加固，涉 T2 seam，工作量中等）。C1 建议接受框架语义（与 nmem CLI 自身优先级一致：env > config）并同步规约/README 措辞；两项均为**文档/规约层小修**，但预算已尽，**须用户明确增加授权**方可派发（修正归 T4 planner；AGENTS.md 属冻结面需授权变更）。
+- 预算状态：全局纠正额度 2/2 已用尽；上述 B1/C1 修正未经授权不派发。
+- S4 约束措辞已按 N3/F1 收窄登记（实证触发形态：特定跨文件绑定场景与 `Omit<…>`+索引访问形态；现行树含 `NMEM.create()` 形态且门禁不崩）。
 - 纠正预算登记：全局纠正额度维持 **2/2 已用尽**。⚠ 整体验收若发现需修正的问题：只登记与汇报，修正须用户明确增加授权。
 - 整体验收准备（待用户启动后执行）：组织新 tester/reviewer/architecture（+必要 explorer）核查真实业务入口→结果使用方全链路、关键失败表现、需求覆盖（D1–D12）；核对各组准入意见、验收证据与集成条件；复用/区分本轮证据与未验证项（远程 A6、O1 风险、S4 外部缺陷、S1–S6 残余）；可选用户参与项：GUI 目视四旋钮（S3）。
 - 外部缺陷登记（S4，转用户知恶）：`../codeharness` 存在跨文件绑定崩溃缺陷（测试对导入 const 直接取成员调用时，CJK 内容必现 `UnicodeDecodeError`，exit 2；合成工程已复现，证据 `/tmp/t3-p1-evidence/05-gate-crash-minimal.txt`）。本仓库现状 0 findings 未受影响；短期约束（T4 起）：测试勿对导入 const 直接取成员调用。按 D5「不改 codeharness 本身」不修；是否另立修复任务由用户另行决定（R2 建议：修复宜以最小复现为回归夹具）。
@@ -99,6 +103,7 @@
 | T3-IMPL（第 0 轮） | planner「T3」组内（coder×3/tester/R1/R2 七会话+smoke） | 三工具+接线+ENV_PROMPT+describe、F4/F5/X4、F1 补齐、真机 smoke、S5 根因定位 | `tasks/T3-worklog.md` §5–§8 | **已完成，组级验收通过**（提交 `0bdbb1b`/`36e622c`/`46bc3c4`；S5 登记→D12 新增范围待执行） |
 | T3-D12（新增范围轮） | planner「T3」组内 | agentId 旋钮（pattern/热改/缺省 coopanion）、botName 移除、四旋钮守护、四类用例、增量准入、真机写路径复验 | `tasks/T3-worklog.md` §10 | **已完成，组级验收通过**（提交 `4bee14f`/`f9e55d6`/`66988cc`；S5 解锁，Mem 端核验在档） |
 | T4-IMPL（第 0 轮） | planner「T4」组内（coder/tester/R1/R2 会话） | 契约套件、入口覆盖、README、场景 A–D 真机执行、缺口 6/9/F2 闭环、联合准入 | `tasks/T4-worklog.md` | **已完成，组级验收通过**（提交 `192e9cb`/`9965b75`，orchestrator 代提交并亲验） |
+| ACCEPT ×3（整体验收） | 新 tester `398bcdd5` / 新 reviewer `759d6f4d` / 新 architecture `d3f6590b`（均独立于组内准入） | 端到端复验/终态审查/方案符合性 | `acceptance/{tester,reviewer,architecture}.md` | **已完成**：tester 通过+新证据；reviewer 需修改（B1/C1）；architecture 接受无阻塞 |
 
 ## 9. 角色会话登记
 
@@ -122,3 +127,4 @@
 - v0.8（2026-10-26）：T3 第 0 轮闭环并核实（101/101、四文件 100%、门禁 11 files 0 findings；R1/R2 接受延伸终态；smoke：挂载/search 通、save 因 S5 422 已根因定位）；用户裁定 **D12**（agent_id 可配置旋钮，缺省 `'coopanion'`）——登记为新增范围授权非纠正轮；architecture.md §1.4/§2e 按实现口径修正并新增 agentId 行；S4 外部缺陷登记（短期约束生效）；S6 分流 T4；T4 场景 B 经 D12 解锁。
 - v0.9（2026-10-26）：T3 D12 轮闭环并亲验（105/105、旋钮逐字落地、botName 零残留、门禁 0 findings；真机全链路：重启→挂载→nmem_save→Mem 端核验 source/agent_id→无残留清理）；R1 接受无阻塞、R2 无保留+终态确认；**S5 写路径解锁**；T1–T3 全部闭环，T4 开放启动。
 - v0.10（2026-10-26）：T4 第 0 轮闭环并亲验（四命令含 live 契约 5/5、门禁 13 files 0 findings；场景 A–D 真机全过、E 未执行按 D9）；缺口 6/9、index.ts 覆盖、F2 闭环；R1/R2 接受；按 T4-D6 建议代为两笔提交（`192e9cb`/`9965b75`）；**实施阶段全部完成**，待用户启动整体验收。
+- v0.11（2026-10-26）：整体验收三方意见收齐并逐份核实（tester 业务闭环成立+自采真机证据；reviewer 需修改 B1/C1+N1–N3；architecture 接受无阻塞+W1–W10）；W1–W10 与 N3 两处冲突已汇入 architecture.md；S4 约束措辞收窄；B1/C1 处置意见登记（推荐文档层小修，须用户增授权）；**待用户裁定收尾方式**。

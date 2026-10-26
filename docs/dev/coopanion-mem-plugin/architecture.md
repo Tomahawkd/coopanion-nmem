@@ -84,6 +84,7 @@ coopanion-nmem/
     ├── world.test.ts                   # dryMountWorld 零失败、start 事件、describe 一致性、cfg 热改
     ├── tools.test.ts                   # 参数校验、回执格式化（注入 fake client）
     ├── mem-client.test.ts              # 注入 transport 的行为矩阵（§3.1）
+    ├── entry.test.ts                   # 入口同引用断言（index.ts 覆盖，T4）
     └── contract.nmem.test.ts           # 本机真实 Mem 冒烟，opt-in（§3.2）
 ```
 
@@ -97,7 +98,7 @@ coopanion-nmem/
 | --- | --- | --- | --- | --- |
 | `nmem_search` | `['read']` | `POST /memories/search` | `query` 必填 string 1..500；`limit` 整数 1..10（缺省取配置 `searchLimit`）；`mode` enum `fast\|deep`（缺省取配置 `searchMode`） | 只读；回执含 id/标题/相似度/摘要（截断），尾部提示可用 `nmem_get` 取全文 |
 | `nmem_get` | `['read']` | `GET /memories/{id}` | `id` 必填 string | 只读；404 → 明确「未找到」回执 |
-| `nmem_save` | `['write']` | `POST /memories` | `content` 必填 string 1..30000（§2c 上限说明）；`title?`；`unit_type?` enum（fact/preference/decision/plan/procedure/learning/context/event，nmem-api §2.3）；`labels?` string[]；`id?` string ≤200（upsert）；`importance?` 0..1 | **幂等**：传 `id` 走服务端 upsert（R9），回执报告 `action: created\|updated`；不传 `id` 为新建。**溯源（实现口径，T3 落地 + D12 修订）**：工具层恒写入 `source:'coopanion'`、`source_app:'cortico-world-nmem'`、`agent_id`（client 只透传，模型不可覆写）；`agent_id` 取配置旋钮 `worlds.nmem.agentId`（缺省 `'coopanion'`；不再使用 `ctx.botName`——S5 实证 Mem 按 agent profile id 校验：小写字母/数字起始，仅字母数字与 `_.:-`，中文 displayName 必 422；"Identity is provenance, not auth."，nmem-api §2.3）；默认并入 label `coopanion`（便于 Mem 侧过滤/清理，R7 提示不写自定义 metadata 键避免与检索诊断混淆） |
+| `nmem_save` | `['write']` | `POST /memories` | `content` 必填 string 1..30000（§2c 上限说明）；`title?`；`unit_type?` enum（fact/preference/decision/plan/procedure/learning/context/event，nmem-api §2.3）；`labels?` string[]；`id?` string ≤200（upsert）；`importance?` 0..1 | **幂等**：传 `id` 走服务端 upsert（R9），回执报告 `action: created\|updated`；不传 `id` 为新建。**溯源（实现口径，T3 落地 + D12 修订）**：工具层恒写入 `source:'coopanion'`、`source_app:'cortico-world-nmem'`、`agent_id`（client 只透传，模型不可覆写）；`agent_id` 取配置旋钮 `worlds.nmem.agentId`（缺省 `'coopanion'`；不再使用 `ctx.botName`——S5 实证 Mem 按 agent profile id 校验：小写字母/数字起始，仅含小写字母、数字与 `_.:-`，中文 displayName 必 422；"Identity is provenance, not auth."，nmem-api §2.3）；默认并入 label `coopanion`（便于 Mem 侧过滤/清理，R7 提示不写自定义 metadata 键避免与检索诊断混淆） |
 
 - `nmem_save` 的 `write` tag 依据：B27 定义 write =「修改 Memory 或 World 的内部记录」；严格看 Mem 是外部系统，但该 tag 的消费意图是「产生持久数据副作用」，与 `act`（对外动作）相比 `write` 是对模型更准确的信号。此为我的判断，若 reviewer 按「外部系统」口径主张 `act`，属可接受变更，不阻塞。
 - 事件：`nmem.started`（`origin:'internal'`，挂载确认，仿模板 B45）。无其他事件——本 World 是「仅提供请求/响应工具」形态（websearch 同类，B47），检索结果不落事件库。
@@ -170,7 +171,7 @@ coopanion-nmem/
 | `worlds.nmem.baseUrl` | string / `http://127.0.0.1:14242` | `false` | 远程填 `https://<host>`；改动需重启（client 在 create() 构造，websearch 同模式 B47） |
 | `worlds.nmem.searchLimit` | integer 1..10 / `5` | `true` | `nmem_search` 缺省条数；热改生效（cfg 活引用） |
 | `worlds.nmem.searchMode` | enum `fast\|deep` / `fast` | `true` | 交互场景优先低延迟（fast=BM25+vector）；工具参数可按次覆盖 |
-| `worlds.nmem.agentId` | string / `'coopanion'` | `true` | 写入 Mem 的 `agent_id`（溯源标识，**D12 用户新增，2026-10-26**）；须满足 Mem 约束：小写字母/数字起始，仅字母数字与 `_.:-`（S5 实证，中文如 displayName 会 422）；ConfigGroup schema 带 pattern；热改生效（工具层现读 cfg） |
+| `worlds.nmem.agentId` | string / `'coopanion'` | `true` | 写入 Mem 的 `agent_id`（溯源标识，**D12 用户新增，2026-10-26**）；须满足 Mem 约束：小写字母/数字起始，仅含小写字母、数字与 `_.:-`（S5 实证，中文如 displayName 会 422）；ConfigGroup schema 带 pattern；热改生效（工具层现读 cfg） |
 
 **秘密：`NMEM_API_KEY` 经部署 `.env`（`ctx.secret()` 在 create() 读取）。**
 
@@ -193,7 +194,7 @@ coopanion-nmem/
 | 401 | **不重试**（错 key 重试会触发 429 限流，R3） | `failed:true` +「认证失败：API key 无效或已轮转」 |
 | 429 | 单次退避重试，再失败即止。**澄清（T2 纠正轮登记）**：`Retry-After` 按标准双形式解析（delay-seconds / HTTP-date，RFC 9110 §10.2.3）：非负秒照旧；HTTP-date 取 `max(0, date−本地时钟)`；空/无效/纯空白 → 1000ms 缺省；指令等待 >10s（对齐 `MEM_TIMEOUT_MS`）→ 不睡眠不重试、立即 `MemRateLimitError` fail-fast | `failed:true` +「Mem 限流，请稍后再试」 |
 | 502/503/504 | 单次重试（500ms） | 重试后仍失败 → `failed:true` +「Mem 服务端错误」 |
-| 4xx 其他 | 不重试 | `failed:true` + 状态码与响应摘要（截断） |
+| 4xx 其他 | 不重试 | `failed:true` + 状态码数字（回执为固定文案，不含响应原文——X4 口径，见 §1.4 与实现；设计初稿的「响应摘要」已被 X4 取代） |
 | 响应形状不可解析 | `MemProtocolError`（防 R4 形态漂移） | `failed:true` +「Mem 响应异常，可能版本不兼容」 |
 
 - 回执语义：handler 不抛裸异常（抛错也会被 Core 转失败回执，B15，但文案不可控）；统一返回 `{ text, failed: true }` 带可行动中文文案。成功回执有界（每条结果摘要截断 ~200 字符，条数上限即 `limit` 上限 10），保护上下文预算。
@@ -216,10 +217,10 @@ coopanion-nmem/
 - `contract.nmem.test.ts` 以环境变量门控（如 `NMEM_CONTRACT_BASE_URL` 未设则 skip），默认目标 `http://127.0.0.1:14242`：
   1. `GET /health` → 200（探活）；
   2. `POST /memories/search`（fast）→ 200 且可收窄为 `MemoryHit[]`（对齐 R4 实测形态）；
-  3. **沙箱写读回**：`POST /memories` 用固定 `id='coopanion-nmem-contract-probe'` + `labels:['coopanion','contract-test']` upsert → 响应 `action` ∈ {created,updated} → `GET /memories/{id}` 读回内容一致。固定 id 使重复运行自我覆写、不累积数据（DELETE 端点存在性未验证，不依赖它清理；探针记录永久留存一条并在测试注释外于 README 说明）；
+  3. **沙箱写读回**：`POST /memories` 用固定 `id='coopanion-nmem-contract-probe'` + `labels:['coopanion','contract-test']` upsert → 响应 `action` ∈ {created,updated} → `GET /memories/{id}` 读回内容一致。固定 id 使重复运行自我覆写；断言完成后 `DELETE /memories/{id}` 自动清理并复核 404（DELETE 已实证存在，见 §7-6 关闭记录），重复运行不累积数据。live upsert（`action:'updated'`）分支由场景 B 真机证据承载——契约探针每轮用后删除，套件内只会出现 created；
   4. 带假 key 请求本机 → 期望 401（验证「有 key 才发头」分支与错误映射，对齐 R2 实测）；
   5. deep 模式延迟观测（信息性记录，为 10s 超时常数提供依据）。
-- 契约测试不进默认 `pnpm test`（保持离线可跑），由 T4 验收与 CI 可选任务显式开启。
+- 契约用例文件随默认 `pnpm test` 被发现并执行为显式 skip（不进默认断言面，保持离线可跑）；设置 `NMEM_CONTRACT_BASE_URL` 即对真实 Mem 执行（T4 落地口径；本仓库无 CI 任务）。
 
 ### 3.3 真机验收（sideload，D6）
 
@@ -240,6 +241,8 @@ coopanion-nmem/
 ## 4. codeharness 策略设计（用户裁定 D5）
 
 ### 4.1 `.codeharness/code-harness.json` 草案
+
+> 以下为设计期草案；现行生效文本以仓库 `.codeharness/code-harness.json` 为准（差异：`third_party_modules` 仅 `["cortico"]`、已含 instance_outputs 声明，见下方定稿补记）。
 
 ```json
 {
@@ -309,7 +312,7 @@ coopanion-nmem/
 1. 改动/评审代码前先读 `../codeharness/docs/engineering-standards.md`（覆盖 TS）。
 2. 类型保真：具体类型端到端；Mem 响应在 client ingress 一次性收窄；禁 `any`/`unknown` 宽化、断言、序列化往返绕边界；`JSON.stringify` 仅限 client 的 HTTP 请求体出口（如门禁不识别，按 §4.1 加声明而非绕过）。
 3. 架构边界以 `.codeharness/code-harness.json` 为准并与实现一致；策略变更需全量审计 + architecture 审查。
-4. 完成前跑：`pnpm typecheck`（`tsc --noEmit`——门禁不做类型推断，TS 项目必须配类型感知检查器）、`pnpm test`（vitest run）、以及（codeharness 环境就绪后）在 `../codeharness` 下 `uv run --no-sync code-harness --root <本仓库绝对路径> --all`。
+4. 完成前跑：`pnpm typecheck`（`tsc --noEmit`——门禁不做类型推断，TS 项目必须配类型感知检查器）、`pnpm test`（vitest run）、`pnpm test:coverage`（覆盖测量为独立交付证据；变异实证为补充证据不替代覆盖测量）、以及（codeharness 环境就绪后）在 `../codeharness` 下 `uv run --no-sync code-harness --root <本仓库绝对路径> --all`。
 5. **不自动回滚/还原/丢弃/删除代码改动**；门禁只读；不得以排除文件、调高阈值、刷新 baseline 制造通过。
 6. 不写实现注释与压制注释（JS/TS 唯一例外：批准的 next-line 诊断压制，须带精确规则 ID 与理由）。
 7. `describe.json` 与工具声明保持同步（一致性测试守护）；dry-mount/check 通过 ≠ 联网可用（B8：check 不验证真实服务）。
@@ -366,12 +369,12 @@ coopanion-nmem/
 1. **codeharness 运行前置（D5①）——已关闭（T1）**：本机 uv 0.13.5 直接 `uv sync --locked --group dev` 成功（无需改装 0.8.22）；`code-harness` `1.0.1.dev6+gbd9ca28e6` 可运行，`../codeharness` git 保持干净；设计期遗留的空 `.venv/` 已被同步填充。
 2. **`check:extension`/`describe:extension` 第三方可用性——已关闭（T1）**：npm 发布包 cortico 不含这两个 scripts（exports 仅 `./package.json` 与 `./* → ./src/*`）；长期替代：经 `cortico/extensions/describe-export.ts` 的 `exportDescribe`/`checkDescribe` + describe 一致性单测（byte-equal 守护）。
 3. **`third_party_modules` 路径形匹配——已关闭（T1）**：见 §4.1 补记（保留惰性 `"cortico"`、不列 `vitest`，两项误报已独立复现）。
-4. `JSON.stringify` 在 fetch 请求体出口是否触发 `type.broad` → T2 实测；触发则加 reviewed encoding outputs 声明（策略变更流程）。
+4. `JSON.stringify` 在 fetch 请求体出口是否触发 `type.broad` → T2 实测；触发则加 reviewed encoding outputs 声明（策略变更流程）。**——已关闭（T2）**：触发形态实测为经 `this.send` 的 body 位；最终机制为已批准的 `instance_outputs` 声明（§4.1 定稿补记，含移除条件与 fail-closed 义务）。
 5. **无面板时 ConfigGroup 旋钮呈现——已关闭（T1，API 级）**：`GET /api/config` 的 `world:nmem` 组四旋钮完整呈现（baseUrl 文本框需重启 / searchLimit 数字框热改 / searchMode 下拉热改）；GUI 目视确认未做（按 T1-D4 口径，API 证据已采）。C1 裁定 B 后 enabled 旋钮移除，呈现重叠不复存在。
-6. Mem `DELETE /memories/{id}` 端点存在性未验证 → 契约测试不依赖删除（固定 id 覆写），如后续验证存在可加可选清理。
-7. deep 模式本机延迟基线未测 → T4 契约测试顺带观测；10s 超时常数如不足在 T2 内调整（保持常数、不加旋钮）。
-8. 远程链路（A6）未验证 → 见 §6.2-3。
-9. 部署 `.env` 的确切路径（`~/Library/Application Support/Coopanion/home/companion/.env` 由 C2/C19 推断）→ T1/T4 验收时确认并写入 README。
+6. Mem `DELETE /memories/{id}` 端点存在性未验证 → 契约测试不依赖删除（固定 id 覆写），如后续验证存在可加可选清理。**——已关闭（T3/T4）**：T3 smoke 实证 DELETE 200；T4 契约测试已落地断言后 DELETE 清理 + 404 复核。
+7. deep 模式本机延迟基线未测 → T4 契约测试顺带观测；10s 超时常数如不足在 T2 内调整（保持常数、不加旋钮）。**——已关闭（T2 观测 / T4 复测）**：deep 实测 ≈2.14–2.19s（T2）、契约复测 846–1082ms（T4）；10s 超时常数维持不调。
+8. 远程链路（A6）未验证 → 见 §6.2-3。**——已按 D9 关闭**：远程以配置面+文档交付并标注未实测；`ctx.secret()` 手工 `.env` 实读回路与场景 E 留待远程化时补验（T4-S2 登记）。
+9. 部署 `.env` 的确切路径（`~/Library/Application Support/Coopanion/home/companion/.env` 由 C2/C19 推断）→ T1/T4 验收时确认并写入 README。**——已关闭（T4）**：rootDir 证据链确认该路径，已写入 README。
 
 ---
 
